@@ -4,5 +4,6 @@ aux_source_directory(. SRC_LIST)
 
 add_executable(sort extsort.cpp main.cpp)
 add_executable(memsort memsort.cpp)
+add_executable(testsort testsort.cpp)
 
 set(CMAKE_CXX_FLAGS "-std=c++11")
