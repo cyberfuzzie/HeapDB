@@ -34,7 +34,10 @@ int main(int argc, char** argv) {
 
     int fdInput = open (argv[1], O_RDONLY);
     int fdOutput = open (argv[2], O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
-    sendfile(fdOutput, fdInput, 0, fileInfo.st_size);
+    for (off_t offset=0; offset<fileInfo.st_size; offset+=fileInfo.st_blksize) {
+        off_t off = offset;
+        sendfile(fdOutput, fdInput, &off, fileInfo.st_blksize);
+    }
     close (fdInput);
 
     memSort (fdOutput, numElements);
