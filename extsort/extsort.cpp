@@ -7,8 +7,10 @@
 #include <queue>
 #include <vector>
 
-#include <sys/types.h>
+#include <sys/mman.h>
+#include <sys/sendfile.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <fcntl.h>
 #include <unistd.h>
 
@@ -79,17 +81,21 @@ void externalSort (int fdInput, uint64_t size, int fdOutput, uint64_t memSize) {
     size_t fileSize = size * sizeof(uint64_t);
     size_t runSize = (memSize / 4096) * 4096;
     size_t runElements = runSize / sizeof(uint64_t);
-    vector<uint64_t> memVector (runElements);
     char tmpName[] = "tmpXXXXXX";
     int fdTemp = mkstemp(tmpName);
     posix_fallocate(fdTemp, 0, fileSize);
 
     // sort blocks of memCount elements in the input file
     for (off_t offset = 0; offset < fileSize; offset += runSize) {
-        ssize_t readCount = pread (fdInput, memVector.data(), runElements * sizeof(uint64_t), offset);
-        // use the actual number of read elements in case the last block is smaller
-        sort (memVector.begin(), memVector.begin() + (readCount / sizeof(uint64_t)));
-        pwrite (fdTemp, memVector.data(), readCount, offset);
+        size_t curRunElements = runElements;
+        if (offset + curRunElements > fileSize) {
+            curRunElements = fileSize - offset;
+        }
+        size_t curRunSize = curRunElements * sizeof(uint64_t);
+        uint64_t *buffer = static_cast<uint64_t*>(mmap(NULL, curRunSize, PROT_READ | PROT_WRITE, MAP_PRIVATE, fdInput, offset));
+        sort (buffer, buffer + curRunElements);
+        pwrite (fdTemp, buffer, curRunSize, offset);
+        munmap(buffer, curRunSize);
     }
 
     externalMerge(fdTemp, fdOutput, runSize, fileSize, 0, memSize);
