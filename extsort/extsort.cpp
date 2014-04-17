@@ -16,8 +16,6 @@
 
 using namespace std;
 
-typedef priority_queue<shared_ptr<MergeRun>, vector<shared_ptr<MergeRun>>, MergeRunCompare> mergeQueue_t;
-
 void externalMerge (int fdInput, int fdOutput, size_t runSize, size_t fileSize, off_t offset, size_t memSize);
 
 MergeRun::MergeRun(int fdInput, off_t offset, size_t runSize, size_t blockSize) :
@@ -26,6 +24,9 @@ MergeRun::MergeRun(int fdInput, off_t offset, size_t runSize, size_t blockSize) 
     readCount(0),
     runSize(runSize),
     blockSize(blockSize),
+    blockBuffer(NULL),
+    currentBlockElements(0),
+    currentBlockSize(0),
     currentPosition(0),
     isEmpty(false)
 {
@@ -33,17 +34,23 @@ MergeRun::MergeRun(int fdInput, off_t offset, size_t runSize, size_t blockSize) 
 }
 
 void MergeRun::readBlock() {
+    if (blockBuffer != NULL) {
+        munmap(blockBuffer, currentBlockSize);
+        blockBuffer = NULL;
+    }
     if (readCount >= runSize) {
         isEmpty = true;
     } else {
-        size_t readSize = runSize - readCount;
-        if (readSize > blockSize) {
-            readSize = blockSize;
+        currentBlockSize = runSize - readCount;
+        if (currentBlockSize > blockSize) {
+            currentBlockSize = blockSize;
         }
-        currentElements.resize(readSize / sizeof(uint64_t));
-        pread(fdInput, currentElements.data(), readSize, readPos);
-        readPos += readSize;
-        readCount += readSize;
+        currentBlockElements = currentBlockSize / sizeof(uint64_t);
+        blockBuffer = static_cast<uint64_t*>(mmap(NULL, currentBlockSize, PROT_READ, MAP_SHARED, fdInput, readPos));
+        madvise(blockBuffer, currentBlockSize, MADV_SEQUENTIAL);
+        readPos += currentBlockSize;
+        readCount += currentBlockSize;
+        currentPosition = 0;
     }
 }
 
@@ -53,22 +60,21 @@ bool MergeRun::empty() {
 
 uint64_t MergeRun::pop() {
     uint64_t value = top();
-    if (++currentPosition >= currentElements.size()) {
+    if (++currentPosition >= currentBlockElements) {
         readBlock();
-        currentPosition = 0;
     }
     return value;
 }
 
 uint64_t MergeRun::top() {
-    return currentElements[currentPosition];
+    return blockBuffer[currentPosition];
 }
 
 MergeRunCompare::MergeRunCompare(const bool& revparam) :
     reverse(revparam)
 {}
 
-bool MergeRunCompare::operator() (const shared_ptr<MergeRun>& lhs, const shared_ptr<MergeRun>& rhs) {
+bool MergeRunCompare::operator() (const mergeQueueEntry_t& lhs, const mergeQueueEntry_t& rhs) {
     if (reverse) {
         return lhs->top() < rhs->top();
     } else {
@@ -93,6 +99,7 @@ void externalSort (int fdInput, uint64_t size, int fdOutput, uint64_t memSize) {
         }
         size_t curRunSize = curRunElements * sizeof(uint64_t);
         uint64_t *buffer = static_cast<uint64_t*>(mmap(NULL, curRunSize, PROT_READ | PROT_WRITE, MAP_PRIVATE, fdInput, offset));
+        madvise(buffer, curRunSize, MADV_RANDOM);
         sort (buffer, buffer + curRunElements);
         pwrite (fdTemp, buffer, curRunSize, offset);
         munmap(buffer, curRunSize);
@@ -150,7 +157,8 @@ void externalMerge (int fdInput, int fdOutput, size_t runSize, size_t fileSize, 
         blockSize = (blockSize / 4096) * 4096;
         size_t blockElements = blockSize / sizeof(uint64_t);
         size_t writeOffset = offset;
-        vector<uint64_t> outputBuffer;
+        uint64_t *outputBuffer = new uint64_t[blockElements];
+        uint64_t outputBufferPos = 0;
         mergeQueue_t mergeQueue;
         for (size_t i = 0; i < runCount; i++) {
             size_t curRunSize = runSize;
@@ -158,27 +166,29 @@ void externalMerge (int fdInput, int fdOutput, size_t runSize, size_t fileSize, 
             if (curRunOffset + curRunSize > offset + fileSize) {
                 curRunSize = offset + fileSize - curRunOffset;
             }
-            shared_ptr<MergeRun> curRun(new MergeRun(fdInput, curRunOffset, curRunSize, blockSize));
-            mergeQueue.push(curRun);
+            mergeQueueEntry_t entry = new MergeRun(fdInput, curRunOffset, curRunSize, blockSize);
+            mergeQueue.push(entry);
         }
 
         while ( !mergeQueue.empty() ) {
-            shared_ptr<MergeRun> next = mergeQueue.top();
+            mergeQueueEntry_t nextEntry = mergeQueue.top();
             mergeQueue.pop();
 
-            uint64_t nextValue = next->pop();
-            outputBuffer.push_back(nextValue);
+            outputBuffer[outputBufferPos++] = nextEntry->pop();
 
-            if ( !next->empty() ) {
-                mergeQueue.push(next);
+            if ( !nextEntry->empty() ) {
+                mergeQueue.push(nextEntry);
+            } else {
+                delete nextEntry;
             }
 
-            if (outputBuffer.size() >= blockElements || mergeQueue.empty()) {
-                size_t writeSize = outputBuffer.size()*sizeof(uint64_t);
-                pwrite(fdOutput, outputBuffer.data(), writeSize, writeOffset);
+            if (outputBufferPos >= blockElements || mergeQueue.empty()) {
+                size_t writeSize = outputBufferPos*sizeof(uint64_t);
+                pwrite(fdOutput, outputBuffer, writeSize, writeOffset);
                 writeOffset += writeSize;
-                outputBuffer.clear();
+                outputBufferPos = 0;
             }
         }
+        delete[] outputBuffer;
     }
 }

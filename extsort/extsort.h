@@ -2,6 +2,7 @@
 #define EXTSORT_H
 
 #include <memory>
+#include <queue>
 #include <vector>
 #include <cstdint>
 #include <sys/types.h>
@@ -17,7 +18,9 @@ class MergeRun {
         size_t readCount;
         size_t runSize;
         size_t blockSize;
-        vector<uint64_t> currentElements;
+        uint64_t *blockBuffer;
+        size_t currentBlockSize;
+        size_t currentBlockElements;
         size_t currentPosition;
         bool isEmpty;
         void readBlock();
@@ -28,12 +31,17 @@ class MergeRun {
         uint64_t top();
 };
 
+class MergeRunCompare;
+
+typedef MergeRun* mergeQueueEntry_t;
+typedef priority_queue<mergeQueueEntry_t, vector<mergeQueueEntry_t>, MergeRunCompare> mergeQueue_t;
+
 class MergeRunCompare {
     private:
         bool reverse;
     public:
         MergeRunCompare(const bool& revparam = false);
-        bool operator() (const shared_ptr<MergeRun>& lhs, const shared_ptr<MergeRun>& rhs);
+        bool operator() (const mergeQueueEntry_t& lhs, const mergeQueueEntry_t& rhs);
 };
 
 #endif // EXTSORT_H
