@@ -1,19 +1,23 @@
 #include "twoq.h"
 
-TwoQ::TwoQ()
+template<typename T>
+TwoQ<T>::TwoQ()
 {
 }
 
-void TwoQ::promote(uint64_t pageID)
+template<typename T>
+void TwoQ<T>::promote(T element)
 {
 }
 
-uint64_t TwoQ::findPageToUnfixFor(uint64_t pageID)
+template<typename T>
+T TwoQ<T>::findPageToUnfixFor(T element)
 {
 
 }
 
-void TwoQ::unfixed(uint64_t pageID)
+template<typename T>
+void TwoQ<T>::unfixed(T element)
 {
 
 }

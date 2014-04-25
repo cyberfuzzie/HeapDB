@@ -3,27 +3,30 @@
 
 #include <cstdint>
 
+template<typename T>
 class TwoQ
 {
 public:
     TwoQ();
-    /**
-     * @brief promote Tells strategy that page has been accessed
-     * @param bufferFrame
-     */
-    void promote(uint64_t pageID);
-    /**
-     * @brief reclaimFor Finds a bufferframe that should be unfixed and used for the given page.
-     * @param pageID
-     * @return the pageID to unfix
-     */
-    uint64_t findPageToUnfixFor(uint64_t pageID);
 
     /**
-     * @brief unfixed Notifies the strategy that a page has been unfixed
-     * @param pageID
+     * @brief promote Tells strategy that T has been accessed
+     * @param bufferFrame
      */
-    void unfixed(uint64_t pageID);
+    void promote(T element);
+
+    /**
+     * @brief findPageToUnfixFor Finds a T that should be unfixed and used for the given T.
+     * @param element
+     * @return the pageID to unfix
+     */
+    T findPageToUnfixFor(T element);
+
+    /**
+     * @brief unfixed Notifies the strategy that a T has been removed
+     * @param T
+     */
+    void unfixed(T element);
 };
 
 #endif // TWOQ_H
