@@ -121,7 +121,8 @@ T ConcurrentListSimple<T>::getLast()
     return last->load;
 }
 
-uint64_t ConcurrentListSimple::getSize()
+template<typename T>
+uint64_t ConcurrentListSimple<T>::getSize()
 {
     return nrElements.load();
 }
