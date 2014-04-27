@@ -12,7 +12,7 @@ class BufferFrame
         virtual ~BufferFrame() = 0;
         void* getData();
     protected:
-        unique_ptr<void> data;
+        unique_ptr<char[]> data;
 };
 
 #endif // BUFFERFRAME_H

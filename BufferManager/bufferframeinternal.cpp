@@ -49,7 +49,7 @@ void BufferFrameInternal::mapPage(uint64_t pageId) {
     char filename[20];
     snprintf (filename, 20, "page%lu", (pageId >> 8));
     int fd = open (filename, O_RDONLY);
-    this->data = unique_ptr<void>(new char[PAGESIZE]);
+    this->data = unique_ptr<char[]>(new char[PAGESIZE]);
     memset (this->data.get(), 0, PAGESIZE);
     if (fd >= 0) {
         // no error, read
