@@ -141,7 +141,7 @@ bool HashTable<K,V>::findKeyWait(const K & key, struct hashTableBucketListHead<K
             }
             // wait if reserved but no valid key
             while (checkFlags(headPtr->list[i].flags, bucketListFlags::Used, bucketListFlags::KeyValid | bucketListFlags::Moved | bucketListFlags::Deleted));
-            if (headPtr->list[i].key == key && checkFlags(headPtr->list[i].flags, bucketListFlags::Used | bucketListFlags::KeyValid, bucketListFlags::Moved | bucketListFlags::Deleted)) {
+            if (checkFlags(headPtr->list[i].flags, bucketListFlags::Used | bucketListFlags::KeyValid, bucketListFlags::Moved | bucketListFlags::Deleted) && headPtr->list[i].key == key) {
                 headPtr->refCount--;
                 return true;
             }
@@ -162,7 +162,7 @@ V HashTable<K,V>::get(const K & key) {
     headPtr->refCount++;
     while (headPtr != nullptr) {
         for (unsigned int i = 0; i < headPtr->list.size(); i++) {
-            if (headPtr->list[i].key == key && checkFlags(headPtr->list[i].flags, bucketListFlags::Used | bucketListFlags::KeyValid, bucketListFlags::Moved | bucketListFlags::Deleted)) {
+            if (checkFlags(headPtr->list[i].flags, bucketListFlags::Used | bucketListFlags::KeyValid, bucketListFlags::Moved | bucketListFlags::Deleted) && headPtr->list[i].key == key) {
                 V& value = headPtr->list[i].value;
                 headPtr->refCount--;
                 return value;
@@ -208,7 +208,7 @@ void HashTable<K,V>::put(const K & key, const V & value) {
     headPtr->refCount++;
     while (headPtr != nullptr) {
         for (unsigned int i = 0; i < headPtr->list.size(); i++) {
-            if (headPtr->list[i].key == key && checkFlags(headPtr->list[i].flags, bucketListFlags::Used | bucketListFlags::KeyValid, bucketListFlags::Moved | bucketListFlags::Deleted)) {
+            if (checkFlags(headPtr->list[i].flags, bucketListFlags::Used | bucketListFlags::KeyValid, bucketListFlags::Moved | bucketListFlags::Deleted) && headPtr->list[i].key == key) {
                 headPtr->list[i].value = value;
                 headPtr->refCount--;
                 return;
@@ -230,7 +230,7 @@ bool HashTable<K,V>::putIfNotExists(const K & key, const V & value) {
     headPtr->refCount++;
     while (headPtr != nullptr) {
         for (unsigned int i = 0; i < headPtr->list.size(); i++) {
-            if (headPtr->list[i].key == key && checkFlags(headPtr->list[i].flags, bucketListFlags::Used | bucketListFlags::KeyValid, bucketListFlags::Moved | bucketListFlags::Deleted)) {
+            if (checkFlags(headPtr->list[i].flags, bucketListFlags::Used | bucketListFlags::KeyValid, bucketListFlags::Moved | bucketListFlags::Deleted) && headPtr->list[i].key == key) {
                 headPtr->refCount--;
                 return false;
             }
@@ -318,7 +318,7 @@ void HashTable<K,V>::remove(const K & key) {
     while (headPtr != nullptr) {
         for (unsigned int i = 0; i < headPtr->list.size(); i++) {
             unsigned int flags = headPtr->list[i].flags;
-            while (headPtr->list[i].key == key && checkFlags(flags, bucketListFlags::Used | bucketListFlags::KeyValid, bucketListFlags::Moved | bucketListFlags::Deleted)) {
+            while (checkFlags(flags, bucketListFlags::Used | bucketListFlags::KeyValid, bucketListFlags::Moved | bucketListFlags::Deleted) && headPtr->list[i].key == key) {
                 headPtr->list[i].flags.compare_exchange_strong(flags, flags | bucketListFlags::Deleted);
                 flags = headPtr->list[i].flags;
             }
