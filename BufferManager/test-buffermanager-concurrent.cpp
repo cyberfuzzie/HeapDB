@@ -121,6 +121,11 @@ int main(int argc, char** argv) {
       totalCountOnDisk+=reinterpret_cast<unsigned*>(bf.getData())[0];
       bm->unfixPage(bf, false);
    }
+
+   // cleanup
+   delete[] threadSeed;
+
+   // result output
    if (totalCount==totalCountOnDisk) {
       cout << "test successful" << endl;
       delete bm;
