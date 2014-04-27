@@ -1,3 +1,6 @@
+#ifndef CONCURRENTLIST_C
+#define CONCURRENTLIST_C
+
 #include "concurrentlist_simple.h"
 
 template<typename T>
@@ -126,3 +129,5 @@ uint64_t ConcurrentListSimple<T>::getSize()
 {
     return nrElements.load();
 }
+
+#endif // CONCURRENTLIST_C

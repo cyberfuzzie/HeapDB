@@ -78,4 +78,6 @@ private:
     atomic<uint64_t> nrElements;
 };
 
+#include "concurrentlist_simple.cpp"
+
 #endif // CONCURRENTLIST_H
