@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include "concurrentlist_simple.h"
+#include "emptyexception.h"
 
 template<typename T>
 class TwoQ
@@ -11,7 +12,7 @@ public:
     TwoQ(uint64_t bufferSize);
 
     /**
-     * @brief promote Tells strategy that T has been accessed
+     * @brief promote Tells strategy that T has been accessed. See concurrency notes!
      * @param bufferFrame
      */
     void promote(T element);
@@ -21,22 +22,25 @@ public:
      * @param element
      * @return the pageID to unfix
      */
-    T findElementToUnfixFor(T element);
+    T findElementToUnfixFor(T element) throw (EmptyException);
 
     /**
-     * @brief unfixed Notifies the strategy that a T has been removed
+     * @brief unfixed Notifies the strategy that a T has been removed. See concurrency notes!
      * @param T
      */
     void unfixed(T element);
 
 private:
+    uint64_t Kin;
+    uint64_t Kout;
 
     ConcurrentListSimple<T> Am;
     ConcurrentListSimple<T> A1in;
     ConcurrentListSimple<T> A1out;
 
-    uint64_t Kin;
-    uint64_t Kout;
+
 };
+
+#include "twoq.cpp"
 
 #endif // TWOQ_H

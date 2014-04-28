@@ -4,6 +4,8 @@
 #include <atomic>
 #include <unordered_map>
 #include <mutex>
+#include <memory>
+#include "emptyexception.h"
 
 using namespace std;
 
@@ -19,8 +21,8 @@ struct Container{
  *  All operations run in O(1).
  */
 template<typename T>
-class ConcurrentListSimple
-{
+class ConcurrentListSimple{
+
 public:
     ConcurrentListSimple();
 
@@ -29,28 +31,28 @@ public:
      * @param element
      * @return True if element was inserted. False if element was already present.
      */
-    bool putTop(T element);
+    bool putTop(const T element);
 
     /**
      * @brief moveTop Moves the given element to the top of the list.
      * @param element
      * @return True if element is in list. False otherwise.
      */
-    bool moveTop(T element);
+    bool moveTop(const T element);
 
     /**
      * @brief contains
      * @param element
      * @return True if element is in list. False otherwise.
      */
-    bool contains(T element);
+    bool contains(const T element);
 
     /**
      * @brief remove Removes the element from the list.
      * @param element
      * @return True if element is found. False if element is not in list.
      */
-    bool remove(T element);
+    bool remove(const T element);
 
     /**
      * @brief removeLast removes the last element in list
@@ -62,7 +64,7 @@ public:
      * @brief getLast
      * @return The last element in the list
      */
-    T getLast();
+    T getLast() throw (EmptyException);
 
     /**
      * @brief getSize
@@ -73,9 +75,11 @@ public:
 private:
     Container<T>* first;
     Container<T>* last;
-    unordered_map<T, Container<T>*> map;
+    unique_ptr<unordered_map<T, Container<T>*>> map;
     mutex m;
-    atomic<uint64_t> nrElements;
+    uint64_t nrElements;
+
+    bool removeContainer(Container<T>* c);
 };
 
 #include "concurrentlist_simple.cpp"

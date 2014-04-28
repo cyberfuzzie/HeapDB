@@ -1,10 +1,29 @@
 #include <iostream>
+#include <cstdint>
+#include "twoq.h"
 
-using namespace std;
+//using namespace std;
 
 int main()
 {
-    cout << "Hello World!" << endl;
+
+    uint64_t size = 8;
+    TwoQ<unsigned int> tq(size);
+
+    std::cout << "Should page out: " << tq.findElementToUnfixFor(1);
+
+    for (unsigned int i = 0; i < size; ++i){
+        tq.promote(i);
+    }
+
+    std::cout << "Should page out: " << tq.findElementToUnfixFor(1);
+
+    for (unsigned int i = 0; i < size; ++i){
+        tq.unfixed(i);
+        tq.promote(i);
+        std::cout << "Should page out: " << tq.findElementToUnfixFor(1) << "\n";
+    }
+
     return 0;
 }
 

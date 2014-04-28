@@ -21,3 +21,5 @@
 *.app
 
 MergeSort-build/
+*-build/
+*.txt.user

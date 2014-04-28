@@ -1,12 +1,15 @@
+#ifndef TWOQ_C
+#define TWOQ_C
+
 #include "twoq.h"
 
 template<typename T>
 TwoQ<T>::TwoQ(uint64_t bufferSize)
     :Kin{bufferSize / 4},
       Kout{bufferSize / 2},
-      Am{ new ConcurrentListSimple<T>},
-      A1in {new ConcurrentListSimple<T>},
-      A1out {new ConcurrentListSimple<T>}
+      Am{},
+      A1in{},
+      A1out{}
 {
 }
 
@@ -35,14 +38,13 @@ void TwoQ<T>::promote(T element)
 }
 
 template<typename T>
-T TwoQ<T>::findElementToUnfixFor(T element)
+T TwoQ<T>::findElementToUnfixFor(T element) throw (EmptyException)
 {
     if (A1in.getSize() > Kin){
         return A1in.getLast();
     }else{
         return Am.getLast();
     }
-
 }
 
 /**
@@ -67,3 +69,4 @@ void TwoQ<T>::unfixed(T element)
     }
 }
 
+#endif

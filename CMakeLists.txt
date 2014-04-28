@@ -8,6 +8,7 @@ add_executable(test-buffermanager "BufferManager/main.cpp"
                                   "BufferManager/concurrentlist.cpp"
                                   "BufferManager/concurrentlist_simple.cpp"
                                   "BufferManager/concurrentstack.cpp"
+                                  "BufferManager/emptyexception.cpp"
                                   "BufferManager/twoq.cpp")
 add_executable(test-hashtable-single "Container/test-hashtable-single.cpp")
 
