@@ -19,6 +19,7 @@ class BufferFrameInternal : public BufferFrame
         void rdlock();
         void wrlock();
         void unlock();
+        uint64_t getMappedPageId();
         void mapPage(uint64_t pageId);
         void writePage();
     protected:

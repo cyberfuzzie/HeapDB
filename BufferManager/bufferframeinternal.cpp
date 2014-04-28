@@ -40,6 +40,10 @@ void BufferFrameInternal::unlock() {
     pthread_rwlock_unlock(&lock);
 }
 
+uint64_t BufferFrameInternal::getMappedPageId() {
+    return this->pageId;
+}
+
 void BufferFrameInternal::mapPage(uint64_t pageId) {
     if (!this->writePossible) {
         cout << "Frame is not held exclusively" << endl;

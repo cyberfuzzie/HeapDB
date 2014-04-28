@@ -3,7 +3,9 @@
 
 #include "bufferframeinternal.h"
 #include "hashtable.h"
+#include "twoq.h"
 
+#include <atomic>
 #include <cstdint>
 #include <memory>
 
@@ -18,7 +20,9 @@ class BufferManager
         void unfixPage(BufferFrame& frame, bool isDirty);
 
     private:
+        atomic<uint64_t> freePages;
         HashTable<uint64_t,shared_ptr<BufferFrameInternal>> mappedPages;
+        TwoQ<uint64_t> twoq;
 };
 
 #endif // BUFFERMANAGER_H
