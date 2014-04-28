@@ -195,7 +195,7 @@ void HashTable<K,V>::moveBucketContentsBack(unsigned int bucket) {
         }
         headPtr->refCount--;
         headPtr = headPtr->next.load();
-        if (headPtr != nullptr) {
+        if (headPtr != nullptr && headPtr->next.load() != nullptr) {
             headPtr->refCount++;
         }
     }
