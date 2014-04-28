@@ -37,6 +37,6 @@ class HashTable
 };
 
 // include the template implementation
-#include "hashtable.cpp"
+#include "hashtable-impl.cpp"
 
 #endif // HASHTABLE_H
