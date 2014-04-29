@@ -5,7 +5,7 @@
 
 template<typename T>
 TwoQ<T>::TwoQ(uint64_t bufferSize)
-    :Kin{bufferSize / 4},
+    : Kin{bufferSize / 4},
       Kout{bufferSize / 2},
       Am{},
       A1in{},
@@ -38,12 +38,20 @@ void TwoQ<T>::promote(T element)
 }
 
 template<typename T>
-T TwoQ<T>::findElementToUnfixFor(T element) throw (EmptyException)
+T TwoQ<T>::reclaim() throw (EmptyException)
 {
     if (A1in.getSize() > Kin){
+        T reclaimed = A1in.getLast();
+        A1in.removeLast();
+        A1out.putTop(reclaimed);
+        if (A1out.getSize() > Kout){
+            A1out.removeLast();
+        }
         return A1in.getLast();
     }else{
-        return Am.getLast();
+        T reclaimed = Am.getLast();
+        Am.removeLast();
+        return reclaimed;
     }
 }
 
@@ -58,7 +66,7 @@ T TwoQ<T>::findElementToUnfixFor(T element) throw (EmptyException)
 template<typename T>
 void TwoQ<T>::unfixed(T element)
 {
-    if (A1in.contains(element)){
+/*    if (A1in.contains(element)){
         A1out.putTop(element);
         A1in.remove(element);
         if (A1out.getSize() > Kout){
@@ -66,7 +74,7 @@ void TwoQ<T>::unfixed(T element)
         }
     }else if (Am.contains(element)){
         Am.remove(element);
-    }
+    }*/
 }
 
 #endif

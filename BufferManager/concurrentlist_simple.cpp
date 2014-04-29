@@ -66,15 +66,18 @@ bool ConcurrentListSimple<T>::moveTop(const T element)
         return true;
     }
 
+    // remove c from list
     c->previous->next = c->next;
-    if (c->next != nullptr){
+    if (c->next != nullptr) {
         c->next->previous = c->previous;
-    }else{
+    } else {
         last = c->previous;
     }
 
+    // put c to front
     c->next = first;
     c->previous = nullptr;
+    first->previous = c;
     first = c;
 
     return true;
@@ -94,22 +97,16 @@ bool ConcurrentListSimple<T>::removeContainer(Container<T>* c){
     }
 
     //take the container out of link chain
-    if (c->previous != nullptr){
+    if (c->previous != nullptr) {
         c->previous->next = c->next;
-    }else{
+    } else {
         first = c->next;
-        if (c->next != nullptr){
-            c->next->previous = nullptr;
-        }
     }
 
-    if (c->next != nullptr){
+    if (c->next != nullptr) {
         c->next->previous = c->previous;
-    }else{
+    } else {
         last = c->previous;
-        if (c->previous != nullptr){
-            c->previous->next = nullptr;
-        }
     }
 
     //erase the container from map

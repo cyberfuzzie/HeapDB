@@ -3,6 +3,7 @@
 
 #include <atomic>
 #include <memory>
+#include <mutex>
 #include <vector>
 
 using namespace std;
@@ -28,6 +29,7 @@ class HashTable
         unsigned int hashBits;
         unsigned int (*hashFunction)(K);
         unique_ptr<hashTableBucket<K,V>[]> buckets;
+        mutex m;
         unsigned int countBucketElements(unsigned int bucket);
         bool findKeyWait(const K & key, struct hashTableBucketListHead<K,V>* lastHeadPtr = nullptr, unsigned int lastListPos = 0);
         void moveBucketContentsBack(unsigned int bucket);

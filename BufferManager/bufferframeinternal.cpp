@@ -24,19 +24,24 @@ BufferFrameInternal::BufferFrameInternal()
 }
 
 void BufferFrameInternal::rdlock() {
-    cout << "Read-Locking BufferFrame" << endl;
     pthread_rwlock_rdlock(&lock);
     this->writePossible = false;
 }
 
+bool BufferFrameInternal::trywrlock() {
+    bool wrlocked = (pthread_rwlock_trywrlock(&lock) == 0);
+    if (wrlocked) {
+        this->writePossible = true;
+    }
+    return wrlocked;
+}
+
 void BufferFrameInternal::wrlock() {
-    cout << "Write-Locking BufferFrame" << endl;
     pthread_rwlock_wrlock(&lock);
     this->writePossible = true;
 }
 
 void BufferFrameInternal::unlock() {
-    cout << "Un-Locking BufferFrame" << endl;
     pthread_rwlock_unlock(&lock);
 }
 
@@ -67,14 +72,14 @@ void BufferFrameInternal::writePage() {
         cout << "Writing is not possible for this page" << endl;
         return;
     }
-    cout << "Writing page " << this->pageId << " to disk" << endl;
+//    cout << "Writing page " << this->pageId << " to disk" << endl;
     char filename[20];
     snprintf (filename, 20, "page%lu", (pageId >> 8));
     int fd = open (filename, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR);
     if (fd >= 0) {
         // no error, read
         posix_fallocate(fd, PAGESIZE * (pageId & 0xff), PAGESIZE);
-        pwrite (fd, this->data.get(), PAGESIZE, PAGESIZE * (pageId & 0xff));
+        ssize_t writeCount = pwrite (fd, this->data.get(), PAGESIZE, PAGESIZE * (pageId & 0xff));
         close (fd);
     }
 }

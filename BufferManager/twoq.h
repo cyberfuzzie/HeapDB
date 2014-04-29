@@ -22,7 +22,7 @@ public:
      * @param element
      * @return the pageID to unfix
      */
-    T findElementToUnfixFor(T element) throw (EmptyException);
+    T reclaim() throw (EmptyException);
 
     /**
      * @brief unfixed Notifies the strategy that a T has been removed. See concurrency notes!

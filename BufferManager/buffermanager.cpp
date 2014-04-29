@@ -21,12 +21,29 @@ BufferManager::~BufferManager() {
 BufferFrame& BufferManager::fixPage(uint64_t pageId, bool exclusive) {
     // first check if already mapped
     auto mappedPage = mappedPages.get(pageId);
-    bool lock = true;
+    while (mappedPage != nullptr) {
+        if (exclusive) {
+            mappedPage->wrlock();
+        } else {
+            mappedPage->rdlock();
+        }
+        // check if we locked the wrong page
+        if (mappedPage->getMappedPageId() != pageId) {
+            mappedPage->unlock();
+            mappedPage = mappedPages.get(pageId);
+        } else {
+            break;
+        }
+    }
     if (mappedPage != nullptr) {
         // found, should promote
         // may happen simultaneous
         twoq.promote(pageId);
+        return *mappedPage;
     }
+
+    // no luck, map the page
+    bool lock = true;
     while (mappedPage == nullptr) {
         bool hasFree = false;
         uint64_t freePages = this->freePages;
@@ -47,59 +64,62 @@ BufferFrame& BufferManager::fixPage(uint64_t pageId, bool exclusive) {
             bool unfixing = true;
             while (unfixing) {
                 try {
-                    pageIdToUnfix = twoq.findElementToUnfixFor(pageId);
+                    pageIdToUnfix = twoq.reclaim();
                     pageToUnfix = mappedPages.get(pageIdToUnfix);
                     if (pageToUnfix == nullptr) {
                         // somebody else already did this
+                        //twoq.unfixed(pageIdToUnfix);
                         continue;
                     }
-                    // write-lock for unfixing
-                    pageToUnfix->wrlock();
-                    if (pageToUnfix->getMappedPageId() == pageIdToUnfix) {
-                        // success, we are owner of the correct page
-                        unfixing = false;
-                    } else {
-                        // page was already reused
-                        pageToUnfix->unlock();
+//                    cout << "no free page found, trying to reclaim page " << pageIdToUnfix << " at " << pageToUnfix.get() << " for page " << pageId << endl;
+                    // try write-lock for unfixing
+                    if (pageToUnfix->trywrlock()) {
+                        if (pageToUnfix->getMappedPageId() == pageIdToUnfix) {
+                            // success, we are owner of the correct page
+                            unfixing = false;
+                        } else {
+                            // page was already reused
+                            pageToUnfix->unlock();
+                        }
                     }
                 } catch (EmptyException& ex) {
                     // ignore & retry
                 }
             }
-            cout << "no free page found, unfixing page " << pageIdToUnfix << endl;
+//            cout << "unfixing page " << pageIdToUnfix << " at " << pageToUnfix.get() << endl;
             twoq.unfixed(pageIdToUnfix);
             mappedPages.remove(pageIdToUnfix);
             newPage = std::move(pageToUnfix);
-            newPage->mapPage(pageId);
         }
 
+        // register the new frame
         if (mappedPages.putIfNotExists(pageId, newPage)) {
             // now map the data
             newPage->mapPage(pageId);
-            // save, have wrlock
             twoq.promote(pageId);
             if (!exclusive) {
                 newPage->unlock();
-            } else {
-                lock = false;
+                newPage->rdlock();
             }
-            mappedPage = newPage;
+            if (newPage->getMappedPageId() != pageId) {
+                newPage->unlock();
+            } else {
+                mappedPage = newPage;
+            }
         } else {
-            // inserting failed, delete new or unfixed page was created
+            // inserting failed, delete new or unfixed which page was created
             newPage->unlock();
             newPage.reset();
             this->freePages++;
             // new lookup, somebody else already mapped pageId
             mappedPage = mappedPages.get(pageId);
+            if (mappedPage->getMappedPageId() != pageId) {
+                mappedPage = shared_ptr<BufferFrameInternal>(nullptr);
+                continue;
+            }
         }
     }
-    if (lock) {
-        if (exclusive) {
-            mappedPage->wrlock();
-        } else {
-            mappedPage->rdlock();
-        }
-    }
+
     return *mappedPage;
 }
 

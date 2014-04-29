@@ -51,7 +51,8 @@ static void* readWrite(void *arg) {
    uintptr_t count = 0;
    for (unsigned i=0; i<100000/threadCount; i++) {
       bool isWrite = rand_r(&threadSeed[threadNum])%128<10;
-      BufferFrame& bf = bm->fixPage(randomPage(threadNum), isWrite);
+      uint64_t page = randomPage(threadNum);
+      BufferFrame& bf = bm->fixPage(page, isWrite);
 
       if (isWrite) {
          count++;
@@ -83,12 +84,16 @@ int main(int argc, char** argv) {
    pthread_attr_t pattr;
    pthread_attr_init(&pattr);
 
+   cout << "initializing pages " << endl;
+
    // set all counters to 0
    for (unsigned i=0; i<pagesOnDisk; i++) {
       BufferFrame& bf = bm->fixPage(i, true);
       reinterpret_cast<unsigned*>(bf.getData())[0]=0;
       bm->unfixPage(bf, true);
    }
+
+   cout << "starting test " << endl;
 
    // start scan thread
    pthread_t scanThread;
@@ -114,6 +119,8 @@ int main(int argc, char** argv) {
    delete bm;
    bm = new BufferManager(pagesInRAM);
    
+   cout << "checking result " << endl;
+
    // check counter
    unsigned totalCountOnDisk = 0;
    for (unsigned i=0; i<pagesOnDisk; i++) {

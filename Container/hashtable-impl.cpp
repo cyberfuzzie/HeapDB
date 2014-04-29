@@ -5,8 +5,8 @@
 
 #include <atomic>
 #include <cstdint>
-#include <iostream>
 #include <memory>
+#include <mutex>
 #include <vector>
 
 using namespace std;
@@ -157,6 +157,7 @@ bool HashTable<K,V>::findKeyWait(const K & key, struct hashTableBucketListHead<K
 
 template <typename K, typename V>
 V HashTable<K,V>::get(const K & key) {
+    unique_lock<mutex> lock(m);
     unsigned int hashBucket = hashFunction(key) & ((1 << hashBits) - 1);
     struct hashTableBucketListHead<K,V>* headPtr = buckets[hashBucket].next.load();
     headPtr->refCount++;
@@ -183,7 +184,7 @@ void HashTable<K,V>::moveBucketContentsBack(unsigned int bucket) {
     headPtr->refCount++;
     while (headPtr->next.load() != nullptr) {
         for (unsigned int i = 0; i < headPtr->list.size(); i++) {
-            while (checkFlags(headPtr->list[i].flags, bucketListFlags::Used, bucketListFlags::Moved)) {
+            while (checkFlags(headPtr->list[i].flags, bucketListFlags::Used, bucketListFlags::Deleted | bucketListFlags::Moved)) {
                 unsigned int flags = headPtr->list[i].flags;
                 if (checkFlags(flags, bucketListFlags::Used | bucketListFlags::KeyValid | bucketListFlags::DataValid, bucketListFlags::Moved | bucketListFlags::Deleted)) {
                     if (headPtr->list[i].flags.compare_exchange_strong(flags, bucketListFlags::Used | bucketListFlags::KeyValid | bucketListFlags::DataValid | bucketListFlags::Moved)) {
@@ -203,6 +204,7 @@ void HashTable<K,V>::moveBucketContentsBack(unsigned int bucket) {
 
 template <typename K, typename V>
 void HashTable<K,V>::put(const K & key, const V & value) {
+    unique_lock<mutex> lock(m);
     unsigned int hashBucket = hashFunction(key) & ((1 << hashBits) - 1);
     struct hashTableBucketListHead<K,V>* headPtr = this->buckets[hashBucket].next.load();
     headPtr->refCount++;
@@ -225,6 +227,7 @@ void HashTable<K,V>::put(const K & key, const V & value) {
 
 template <typename K, typename V>
 bool HashTable<K,V>::putIfNotExists(const K & key, const V & value) {
+    unique_lock<mutex> lock(m);
     unsigned int hashBucket = hashFunction(key) & ((1 << hashBits) - 1);
     struct hashTableBucketListHead<K,V>* headPtr = this->buckets[hashBucket].next.load();
     headPtr->refCount++;
@@ -289,36 +292,15 @@ bool HashTable<K,V>::putNew(const K & key, const V & value) {
 }
 
 template <typename K, typename V>
-bool HashTable<K,V>::resizeBucket(unsigned int bucket, struct hashTableBucketListHead<K,V>* headPtr) {
-    headPtr->refCount++;
-    struct hashTableBucketListHead<K,V>* nextHeadPtr = headPtr->next.load();
-    if (nextHeadPtr != nullptr) {
-        headPtr->refCount--;
-        return false;
-    }
-    unsigned int newListSize = countBucketElements(bucket);
-    if (newListSize * 2 > headPtr->list.size()) {
-        newListSize = headPtr->list.size() * 2;
-    }
-    struct hashTableBucketListHead<K,V>* newHeadPtr  = new hashTableBucketListHead<K,V>(newListSize);
-    if (!headPtr->next.compare_exchange_strong(nextHeadPtr, newHeadPtr)) {
-        delete newHeadPtr;
-        headPtr->refCount--;
-        return false;
-    }
-    headPtr->refCount--;
-    return true;
-}
-
-template <typename K, typename V>
 void HashTable<K,V>::remove(const K & key) {
+    unique_lock<mutex> lock(m);
     unsigned int hashBucket = hashFunction(key) & ((1 << hashBits) - 1);
     struct hashTableBucketListHead<K,V>* headPtr = this->buckets[hashBucket].next.load();
     headPtr->refCount++;
     while (headPtr != nullptr) {
         for (unsigned int i = 0; i < headPtr->list.size(); i++) {
             unsigned int flags = headPtr->list[i].flags;
-            while (checkFlags(flags, bucketListFlags::Used | bucketListFlags::KeyValid, bucketListFlags::Moved | bucketListFlags::Deleted) && headPtr->list[i].key == key) {
+            while (checkFlags(flags, bucketListFlags::Used | bucketListFlags::KeyValid, bucketListFlags::Deleted) && headPtr->list[i].key == key) {
                 headPtr->list[i].flags.compare_exchange_strong(flags, flags | bucketListFlags::Deleted);
                 flags = headPtr->list[i].flags;
             }
@@ -329,6 +311,29 @@ void HashTable<K,V>::remove(const K & key) {
             headPtr->refCount++;
         }
     }
+}
+
+template <typename K, typename V>
+bool HashTable<K,V>::resizeBucket(unsigned int bucket, struct hashTableBucketListHead<K,V>* headPtr) {
+    headPtr->refCount++;
+    struct hashTableBucketListHead<K,V>* nextHeadPtr = headPtr->next.load();
+    if (nextHeadPtr != nullptr) {
+        headPtr->refCount--;
+        return false;
+    }
+    uint64_t newListSize = headPtr->list.size();
+    uint64_t elementCount = countBucketElements(bucket);
+    if (elementCount * 2 > newListSize) {
+        newListSize = newListSize * 2;
+    }
+    struct hashTableBucketListHead<K,V>* newHeadPtr  = new hashTableBucketListHead<K,V>(newListSize);
+    if (!headPtr->next.compare_exchange_strong(nextHeadPtr, newHeadPtr)) {
+        delete newHeadPtr;
+        headPtr->refCount--;
+        return false;
+    }
+    headPtr->refCount--;
+    return true;
 }
 
 template <typename K, typename V>
