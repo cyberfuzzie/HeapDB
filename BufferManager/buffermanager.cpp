@@ -20,7 +20,7 @@ BufferManager::~BufferManager() {
 
 BufferFrame& BufferManager::fixPage(uint64_t pageId, bool exclusive) {
     // first check if already mapped
-    auto mappedPage = mappedPages.get(pageId);
+    shared_ptr<BufferFrameInternal> mappedPage = mappedPages.get(pageId);
     while (mappedPage != nullptr) {
         if (exclusive) {
             mappedPage->wrlock();
@@ -73,14 +73,13 @@ BufferFrame& BufferManager::fixPage(uint64_t pageId, bool exclusive) {
                     }
 //                    cout << "no free page found, trying to reclaim page " << pageIdToUnfix << " at " << pageToUnfix.get() << " for page " << pageId << endl;
                     // try write-lock for unfixing
-                    if (pageToUnfix->trywrlock()) {
-                        if (pageToUnfix->getMappedPageId() == pageIdToUnfix) {
-                            // success, we are owner of the correct page
-                            unfixing = false;
-                        } else {
-                            // page was already reused
-                            pageToUnfix->unlock();
-                        }
+                    pageToUnfix->wrlock();
+                    if (pageToUnfix->getMappedPageId() == pageIdToUnfix) {
+                        // success, we are owner of the correct page
+                        unfixing = false;
+                    } else {
+                        // page was already reused
+                        pageToUnfix->unlock();
                     }
                 } catch (EmptyException& ex) {
                     // ignore & retry
@@ -113,7 +112,13 @@ BufferFrame& BufferManager::fixPage(uint64_t pageId, bool exclusive) {
             this->freePages++;
             // new lookup, somebody else already mapped pageId
             mappedPage = mappedPages.get(pageId);
+            if (exclusive) {
+                mappedPage->wrlock();
+            } else {
+                mappedPage->rdlock();
+            }
             if (mappedPage->getMappedPageId() != pageId) {
+                mappedPage->unlock();
                 mappedPage = shared_ptr<BufferFrameInternal>(nullptr);
                 continue;
             }
