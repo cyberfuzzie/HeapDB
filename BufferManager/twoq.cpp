@@ -40,18 +40,26 @@ void TwoQ<T>::promote(T element)
 template<typename T>
 T TwoQ<T>::reclaim() throw (EmptyException)
 {
-    if (A1in.getSize() > Kin){
-        T reclaimed = A1in.getLast();
-        A1in.removeLast();
-        A1out.putTop(reclaimed);
-        if (A1out.getSize() > Kout){
-            A1out.removeLast();
+    while(true){
+        if (A1in.getSize() > Kin){
+            T reclaimed = A1in.getLast();
+            //Someone else removed this before us -> retry
+            if (!A1in.remove(reclaimed)){
+                continue;
+            }
+            A1out.putTop(reclaimed);
+            if (A1out.getSize() > Kout){
+                A1out.removeLast();
+            }
+            return reclaimed;
+        }else{
+            T reclaimed = Am.getLast();
+            //Someone else removed this before us -> retry
+            if (!Am.remove(reclaimed)){
+                continue;
+            }
+            return reclaimed;
         }
-        return A1in.getLast();
-    }else{
-        T reclaimed = Am.getLast();
-        Am.removeLast();
-        return reclaimed;
     }
 }
 
