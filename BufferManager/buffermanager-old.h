@@ -1,14 +1,13 @@
 #ifndef BUFFERMANAGER_H
 #define BUFFERMANAGER_H
 
-#include "bufferframe.h"
-#include "buffermanagerhashtable.h"
-#include "replacementmanager.h"
+#include "bufferframeinternal.h"
+#include "hashtable.h"
+#include "twoq.h"
 
 #include <atomic>
 #include <cstdint>
 #include <memory>
-#include <vector>
 
 using namespace std;
 
@@ -21,11 +20,9 @@ class BufferManager
         void unfixPage(BufferFrame& frame, bool isDirty);
 
     private:
-        unique_ptr<BufferFrame[]> frames;
-        BufferManagerHashTable mappedPages;
-        vector<uint64_t> freeFrames;
-        mutex freeFramesMutex;
-        ReplacementManager replaceMgr;
+        atomic<uint64_t> freePages;
+        HashTable<uint64_t,shared_ptr<BufferFrameInternal>> mappedPages;
+        TwoQ<uint64_t> twoq;
 };
 
 #endif // BUFFERMANAGER_H

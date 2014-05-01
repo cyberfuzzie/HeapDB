@@ -17,7 +17,7 @@ class BufferFrameInternal : public BufferFrame
          */
         BufferFrameInternal();
         void rdlock();
-        bool trywrlock();
+//        bool trywrlock();
         void wrlock();
         void unlock();
         uint64_t getMappedPageId();

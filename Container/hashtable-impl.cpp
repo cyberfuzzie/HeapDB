@@ -190,6 +190,8 @@ void HashTable<K,V>::moveBucketContentsBack(unsigned int bucket) {
                     if (headPtr->list[i].flags.compare_exchange_strong(flags, bucketListFlags::Used | bucketListFlags::KeyValid | bucketListFlags::DataValid | bucketListFlags::Moved)) {
                         // now actually move it
                         putNew(headPtr->list[i].key, headPtr->list[i].value);
+                        // and clear the old value
+                        headPtr->list[i].value = 0;
                     }
                 }
             }
@@ -301,7 +303,10 @@ void HashTable<K,V>::remove(const K & key) {
         for (unsigned int i = 0; i < headPtr->list.size(); i++) {
             unsigned int flags = headPtr->list[i].flags;
             while (checkFlags(flags, bucketListFlags::Used | bucketListFlags::KeyValid, bucketListFlags::Deleted) && headPtr->list[i].key == key) {
-                headPtr->list[i].flags.compare_exchange_strong(flags, flags | bucketListFlags::Deleted);
+                if (headPtr->list[i].flags.compare_exchange_strong(flags, flags | bucketListFlags::Deleted)) {
+                    // and clear value
+                    headPtr->list[i].value = 0;
+                }
                 flags = headPtr->list[i].flags;
             }
         }

@@ -1,6 +1,7 @@
 
 #include "buffermanager.h"
 
+#include <mutex>
 #include <iostream>
 #include <stdlib.h>
 #include <stdint.h>
@@ -15,6 +16,7 @@ unsigned pagesInRAM;
 unsigned threadCount;
 unsigned* threadSeed;
 volatile bool stop=false;
+mutex m;
 
 unsigned randomPage(unsigned threadNum) {
    // pseudo-gaussian, causes skewed access pattern
@@ -33,11 +35,19 @@ static void* scan(void *arg) {
    while (!stop) {
       unsigned start = random()%(pagesOnDisk-10);
       for (unsigned page=start; page<start+10; page++) {
+//         cout << "Fixing page " << page << " for scanning" << endl;
          BufferFrame& bf = bm->fixPage(page, false);
+//         cout << "Fixed page " << page << " for scanning" << endl;
          unsigned newcount = reinterpret_cast<unsigned*>(bf.getData())[0];
+//         {
+//             unique_lock<mutex> lock(m);
+//             cout << "Testing page " << page << " in frame " << &bf << " data at " << bf.getData() << " with old value " << counters[page] << " and new value " << newcount << endl;
+//         }
          assert(counters[page]<=newcount);
          counters[page]=newcount;
+//         cout << "Unfixing page " << page << " from scanning" << endl;
          bm->unfixPage(bf, false);
+//         cout << "Unfixed page " << page << " from scanning" << endl;
       }
    }
 
@@ -52,13 +62,21 @@ static void* readWrite(void *arg) {
    for (unsigned i=0; i<100000/threadCount; i++) {
       bool isWrite = rand_r(&threadSeed[threadNum])%128<10;
       uint64_t page = randomPage(threadNum);
+//      cout << "Fixing page " << page << " for writing " << isWrite << endl;
       BufferFrame& bf = bm->fixPage(page, isWrite);
+//      cout << "Fixed page " << page << " for writing " << isWrite << endl;
 
       if (isWrite) {
          count++;
          reinterpret_cast<unsigned*>(bf.getData())[0]++;
+//         {
+//             unique_lock<mutex> lock(m);
+//             cout << "Writing page " << page << " in frame " << &bf << " data at " << bf.getData() << " with value " << reinterpret_cast<unsigned*>(bf.getData())[0] << endl;
+//         }
       }
+//      cout << "Unfixing page " << page << " from writing " << isWrite << endl;
       bm->unfixPage(bf, isWrite);
+//      cout << "Unfixed page " << page << " from writing " << isWrite << endl;
    }
 
    return reinterpret_cast<void*>(count);
