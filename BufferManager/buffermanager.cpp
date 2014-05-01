@@ -62,13 +62,10 @@ BufferFrame& BufferManager::fixPage(uint64_t pageId, bool exclusive) {
             }
 
             frames[frameId-1].mapPage(pageId);
-            // release the write lock for deadlock prevention
-            frames[frameId-1].unlock();
             result = mappedPages.insertFrameIfNotExists(frames[frameId-1]);
             if (result) {
-                if (exclusive) {
-                    frames[frameId-1].wrlock();
-                } else {
+                if (!exclusive) {
+                    frames[frameId-1].unlock();
                     frames[frameId-1].rdlock();
                 }
 
