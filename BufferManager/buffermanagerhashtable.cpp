@@ -43,8 +43,7 @@ bool BufferManagerHashTable::getFrameLocked(uint64_t pageId, uint64_t* frameId, 
 
             // save result and return
             *frameId = foundFrameId;
-            bool writeCheck = frames[*frameId-1].writePossible.load();
-            assert(writeCheck == exclusive);
+            assert(frames[*frameId-1].writePossible == exclusive);
             return true;
         } else {
             // nothing found

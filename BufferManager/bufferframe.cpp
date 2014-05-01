@@ -39,40 +39,32 @@ void* BufferFrame::getData() {
 
 void BufferFrame::rdlock() {
     int result = pthread_rwlock_rdlock(&lock);
-    this->writePossible.store(false);
-    atomic_thread_fence(memory_order_seq_cst);
     assert(result == 0);
-    bool writeCheck = this->writePossible.load();
-    assert(writeCheck == false);
+    this->writePossible = false;
+    assert(this->writePossible == false);
 }
 
 void BufferFrame::wrlock() {
     int result = pthread_rwlock_wrlock(&lock);
-    this->writePossible.store(true);
-    atomic_thread_fence(memory_order_seq_cst);
     assert(result == 0);
-    bool writeCheck = this->writePossible.load();
-    assert(writeCheck == true);
+    this->writePossible = true;
+    assert(this->writePossible == true);
 }
 
 bool BufferFrame::trywrlock() {
     int result = pthread_rwlock_trywrlock(&lock) == 0;
     if (result) {
-        this->writePossible.store(true);
-        atomic_thread_fence(memory_order_seq_cst);
-        bool writeCheck = this->writePossible.load();
-        assert(writeCheck == true);
+        this->writePossible = true;
+        assert(this->writePossible == true);
     }
     return result;
 }
 
 void BufferFrame::unlock() {
+    this->writePossible = false;
+    assert(this->writePossible == false);
     int result = pthread_rwlock_unlock(&lock);
-    this->writePossible.store(false);
-    atomic_thread_fence(memory_order_seq_cst);
     assert(result == 0);
-    bool writeCheck = this->writePossible.load();
-    assert(writeCheck == false);
 }
 
 uint64_t BufferFrame::getMappedPageId() {

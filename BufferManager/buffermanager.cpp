@@ -31,8 +31,7 @@ BufferFrame& BufferManager::fixPage(uint64_t pageId, bool exclusive) {
             assert(frameId > 0);
             // that was easy
             replaceMgr.removeFrame(frameId);
-            bool writeCheck = frames[frameId-1].writePossible.load();
-            assert(writeCheck == exclusive);
+            assert(frames[frameId-1].writePossible == exclusive);
             return frames[frameId-1];
         }
 
@@ -70,8 +69,7 @@ BufferFrame& BufferManager::fixPage(uint64_t pageId, bool exclusive) {
                 }
 
                 if (frames[frameId-1].getMappedPageId() == pageId) {
-                    bool writeCheck = frames[frameId-1].writePossible.load();
-                    assert(writeCheck == exclusive);
+                    assert(frames[frameId-1].writePossible == exclusive);
                     return frames[frameId-1];
                 }
                 frames[frameId-1].unlock();
