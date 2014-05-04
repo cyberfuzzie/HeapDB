@@ -13,12 +13,16 @@ add_executable(test-buffermanager "BufferManager/test-buffermanager.cpp"
                                   "BufferManager/bufferframe.cpp"
                                   "BufferManager/buffermanager.cpp"
                                   "BufferManager/buffermanagerhashtable.cpp"
-                                  "BufferManager/replacementmanager.cpp")
+                                  "BufferManager/replacementmanager.cpp"
+                                  "BufferManager/twoq.cpp"
+                                  "BufferManager/emptyexception.cpp")
 add_executable(test-buffermanager-concurrent "BufferManager/test-buffermanager-concurrent.cpp"
                                              "BufferManager/bufferframe.cpp"
                                              "BufferManager/buffermanager.cpp"
                                              "BufferManager/buffermanagerhashtable.cpp"
-                                             "BufferManager/replacementmanager.cpp")
+                                             "BufferManager/replacementmanager.cpp"
+                                             "BufferManager/twoq.cpp"
+                                             "BufferManager/emptyexception.cpp")
 
 # Dummy library to "use" all .cpp files
 add_library(dummy "BufferManager/twoq.cpp")

@@ -7,8 +7,8 @@
 int main()
 {
 
-    uint64_t size = 8;
-    TwoQ<unsigned int> tq(size);
+   /* uint64_t size = 8;
+    TwoQ tq(size);
 
     std::cout << "Should page out: " << tq.reclaim();
 
@@ -22,7 +22,7 @@ int main()
         tq.unfixed(i);
         tq.promote(i);
         std::cout << "Should page out: " << tq.reclaim() << "\n";
-    }
+    } */
 
     return 0;
 }

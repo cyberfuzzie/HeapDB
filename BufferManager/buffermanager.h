@@ -3,12 +3,13 @@
 
 #include "bufferframe.h"
 #include "buffermanagerhashtable.h"
-#include "replacementmanager.h"
+#include "twoq.h"
 
 #include <atomic>
 #include <cstdint>
 #include <memory>
 #include <vector>
+
 
 using namespace std;
 
@@ -25,7 +26,7 @@ class BufferManager
         BufferManagerHashTable mappedPages;
         vector<uint64_t> freeFrames;
         mutex freeFramesMutex;
-        ReplacementManager replaceMgr;
+        TwoQ twoq;
 };
 
 #endif // BUFFERMANAGER_H

@@ -3,8 +3,10 @@
 
 #include "twoq.h"
 
-template<typename T>
-TwoQ<T>::TwoQ(uint64_t bufferSize)
+
+#include <mutex>
+
+TwoQ::TwoQ(uint64_t bufferSize)
     : Kin{bufferSize / 4},
       Kout{bufferSize / 2},
       Am{},
@@ -13,76 +15,60 @@ TwoQ<T>::TwoQ(uint64_t bufferSize)
 {
 }
 
-/**
- * Caller must assure to not call this method
- * concurrently for the same element, unless
- * element is in Am.
- *
- * In case of Buffermanager, this can be done by
- * having the BM hold an X lock on the page after
- * fixing it or when unfixing it.
- */
-template<typename T>
-void TwoQ<T>::promote(T element)
+void TwoQ::promote(BufferFrame* frame)
 {
-    if (Am.contains(element)){
-        Am.moveTop(element);
-    }else if (A1out.contains(element)){
-        Am.putTop(element);
-        A1out.remove(element);
-    }else if (A1in.contains(element)){
+    unique_lock<mutex> lck{m};
+    if (Am.contains(frame)){
+        Am.moveTop(frame);
+    }else if (A1out.contains(frame->getMappedPageId())){
+        Am.putTop(frame);
+        A1out.remove(frame->getMappedPageId());
+    }else if (A1in.contains(frame)){
         //do nothing
     }else{
-        A1in.putTop(element);
+        A1in.putTop(frame);
     }
 }
 
-template<typename T>
-T TwoQ<T>::reclaim() throw (EmptyException)
+BufferFrame* TwoQ::getFrameForReclaim()
 {
+    unique_lock<mutex> lck{m};
+
+    //TODO: check if all frames are in use, e.g. by setting counters
     while(true){
         if (A1in.getSize() > Kin){
-            T reclaimed = A1in.getLast();
-            //Someone else removed this before us -> retry
-            if (!A1in.remove(reclaimed)){
+            BufferFrame* reclaim = A1in.getLast();
+            if (reclaim->refCount > 0){
+                //if the candidate for reclaim is still in use
+                //give him an upgrade to the hotlist.
+                A1in.remove(reclaim);
+                Am.putTop(reclaim);
                 continue;
             }
-            A1out.putTop(reclaimed);
+
+            //Remove the frame that will be reclaimed from
+            //A1 and remember the pageId
+            A1in.remove(reclaim);
+            A1out.putTop(reclaim->getMappedPageId());
+
+            //housekeeping on remembered page Ids
             if (A1out.getSize() > Kout){
                 A1out.removeLast();
             }
-            return reclaimed;
+
+            return reclaim;
         }else{
-            T reclaimed = Am.getLast();
-            //Someone else removed this before us -> retry
-            if (!Am.remove(reclaimed)){
+            BufferFrame* reclaim = Am.getLast();
+            if (reclaim->refCount > 0){
+                Am.moveTop(reclaim);
                 continue;
             }
-            return reclaimed;
+
+            Am.remove(reclaim);
+
+            return reclaim;
         }
     }
-}
-
-/**
- * Caller must assure to not call this method
- * concurrently for the same element.
- *
- * In case of Buffermanager, this can be done by
- * having the BM hold an X lock on the page after
- * fixing it or when unfixing it.
- */
-template<typename T>
-void TwoQ<T>::unfixed(T element)
-{
-/*    if (A1in.contains(element)){
-        A1out.putTop(element);
-        A1in.remove(element);
-        if (A1out.getSize() > Kout){
-            A1out.removeLast();
-        }
-    }else if (Am.contains(element)){
-        Am.remove(element);
-    }*/
 }
 
 #endif

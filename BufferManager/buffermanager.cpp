@@ -1,11 +1,14 @@
 
 #include "buffermanager.h"
 
+
 #include <cassert>
 
 BufferManager::BufferManager(uint64_t size)
     : frames(new BufferFrame[size]),
-      mappedPages(frames.get()) {
+      mappedPages(frames.get()),
+      twoq{size}
+{
     freeFrames.reserve(size);
     for (uint64_t i = 0; i < size; i++) {
         frames[i].setFrameId(i+1);
@@ -30,7 +33,8 @@ BufferFrame& BufferManager::fixPage(uint64_t pageId, bool exclusive) {
         if (result) {
             assert(frameId > 0);
             // that was easy
-            replaceMgr.removeFrame(frameId);
+            //tell TwoQ that frame is used
+            twoq.promote(&(frames[frameId-1]));
             assert(frames[frameId-1].writePossible == exclusive);
             return frames[frameId-1];
         }
@@ -49,18 +53,29 @@ BufferFrame& BufferManager::fixPage(uint64_t pageId, bool exclusive) {
             } else {
                 freeFramesLock.unlock();
 
-                frameId = replaceMgr.reclaimFrame();
+                //get a frame that we can reclaim
+                BufferFrame* reclaimCandidate = twoq.getFrameForReclaim();
+
+                frameId = reclaimCandidate->getFrameId();
                 assert(frameId > 0);
-                result = mappedPages.removeFrameLocked(frames[frameId-1]);
+                result = mappedPages.removeFrameLocked(*reclaimCandidate);
                 if (result) {
                     frames[frameId-1].refCount++;
                     // lock already set
                 } else {
+                    //in case the frame couldn't be removed from the hashtable:
+                    //tell twoq that we were not able to reclaim
+                    twoq.promote(reclaimCandidate);
                     continue;
                 }
             }
 
+
             frames[frameId-1].mapPage(pageId);
+
+            //tell replaceMgr that page with frame is in use
+            twoq.promote(&frames[frameId-1]);
+
             result = mappedPages.insertFrameIfNotExists(frames[frameId-1]);
             if (result) {
                 if (!exclusive) {
@@ -107,7 +122,5 @@ void BufferManager::unfixPage(BufferFrame& frame, bool isDirty) {
     // unlock and check refCount
     frame.unlock();
     frame.refCount--;
-    if (frame.refCount == 0) {
-        replaceMgr.promoteFrame(frame.getFrameId());
-    }
+
 }
