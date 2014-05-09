@@ -79,7 +79,7 @@ void BufferFrame::mapPage(uint64_t pageId) {
     }
     this->pageId = pageId;
     char filename[20];
-    snprintf (filename, 20, "page%lu", (pageId >> 8));
+    calculateFilename(pageId, filename, sizeof(filename));
     int fd = open (filename, O_RDONLY);
     struct stat fileInfo;
     fstat(fd, &fileInfo);
@@ -87,11 +87,11 @@ void BufferFrame::mapPage(uint64_t pageId) {
     memset (this->data.get(), 0, PAGESIZE);
     if (fd >= 0) {
         // no error, read
-        off_t readExpected = fileInfo.st_size - PAGESIZE * (pageId & 0xff);
+        off_t readExpected = fileInfo.st_size - PAGESIZE * extractActualPageId(pageId);
         if (readExpected > PAGESIZE) {
             readExpected = PAGESIZE;
         }
-        ssize_t readCount = pread (fd, this->data.get(), PAGESIZE, PAGESIZE * (pageId & 0xff));
+        ssize_t readCount = pread (fd, this->data.get(), PAGESIZE, PAGESIZE * extractActualPageId(pageId));
         assert(readCount == readExpected);
         close (fd);
     }
@@ -104,13 +104,25 @@ void BufferFrame::writePage() {
         return;
     }
     char filename[20];
-    snprintf (filename, 20, "page%lu", (pageId >> 8));
+    calculateFilename(pageId, filename, sizeof(filename));
     int fd = open (filename, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR);
     if (fd >= 0) {
         // no error, read
-        posix_fallocate(fd, PAGESIZE * (pageId & 0xff), PAGESIZE);
-        ssize_t writeCount = pwrite (fd, this->data.get(), PAGESIZE, PAGESIZE * (pageId & 0xff));
+        posix_fallocate(fd, PAGESIZE * extractActualPageId(pageId), PAGESIZE);
+        ssize_t writeCount = pwrite (fd, this->data.get(), PAGESIZE, PAGESIZE * extractActualPageId(pageId));
         assert(writeCount == PAGESIZE);
         close (fd);
     }
+}
+
+void BufferFrame::calculateFilename(uint64_t pageId, char* buffer, size_t bufLen) {
+    snprintf (buffer, bufLen, "segment%07lu", extractSegmentId(pageId));
+}
+
+uint64_t BufferFrame::extractActualPageId(uint64_t pageId) {
+    return pageId & 0xffffffffff;
+}
+
+uint64_t BufferFrame::extractSegmentId(uint64_t pageId) {
+    return pageId >> 40;
 }

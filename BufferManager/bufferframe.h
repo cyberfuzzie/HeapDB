@@ -33,6 +33,9 @@ class BufferFrame
         uint64_t frameId;
         atomic<uint64_t> pageId;
         pthread_rwlock_t lock;
+        inline void calculateFilename(uint64_t pageId, char* buffer, size_t bufLen);
+        inline uint64_t extractActualPageId(uint64_t pageId);
+        inline uint64_t extractSegmentId(uint64_t pageId);
 };
 
 #endif // BUFFERFRAME_H
