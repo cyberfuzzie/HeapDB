@@ -74,6 +74,7 @@ uint64_t BufferFrame::getMappedPageId() {
 void BufferFrame::mapPage(uint64_t pageId) {
     atomic_thread_fence(memory_order_seq_cst);
     if (!this->writePossible) {
+        //TODO: throw error
         cout << "Frame is not held exclusively" << endl;
         return;
     }

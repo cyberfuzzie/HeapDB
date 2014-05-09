@@ -1,46 +1,43 @@
 #ifndef TWOQ_H
 #define TWOQ_H
 
-#include <cstdint>
+
 #include "concurrentlist_simple.h"
 #include "emptyexception.h"
+#include "bufferframe.h"
 
-template<typename T>
+#include <cstdint>
+#include <mutex>
+
 class TwoQ
 {
 public:
     TwoQ(uint64_t bufferSize);
 
     /**
-     * @brief promote Tells strategy that T has been accessed. See concurrency notes!
+     * @brief promote inform TwoQ that this frame has just been used.
      * @param bufferFrame
      */
-    void promote(T element);
+    void promote(BufferFrame* frame);
 
     /**
-     * @brief findElementToUnfixFor Finds a T that should be unfixed and used for the given T.
-     * @param element
-     * @return the pageID to unfix
+     * @brief findElementToUnfixFor
+     * @return the BufferFrame that should be overriden next. Subsequent calls do not
+     *          get the same BufferFrame, unless the BufferFrame was promoted again.
      */
-    T reclaim() throw (EmptyException);
-
-    /**
-     * @brief unfixed Notifies the strategy that a T has been removed. See concurrency notes!
-     * @param T
-     */
-    void unfixed(T element);
+    BufferFrame* getFrameForReclaim();
 
 private:
     uint64_t Kin;
     uint64_t Kout;
 
-    ConcurrentListSimple<T> Am;
-    ConcurrentListSimple<T> A1in;
-    ConcurrentListSimple<T> A1out;
+    ConcurrentListSimple<BufferFrame*> Am;
+    ConcurrentListSimple<BufferFrame*> A1in;
+    ConcurrentListSimple<uint64_t> A1out;
+
+    mutex m;
 
 
 };
-
-#include "twoq.cpp"
 
 #endif // TWOQ_H
