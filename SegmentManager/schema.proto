@@ -1,0 +1,39 @@
+package schema;
+
+message Attribute {
+
+    enum Type {
+        Bool = 1;
+        Char = 2;
+        Varchar = 3;
+        Date = 4;
+        Float = 5;
+        Decimal = 6;
+        Numeric = 7;
+        Timestamp = 8;
+    }
+
+    message Argument {
+        optional int64 int = 1;
+        optional string string = 2;
+    }
+
+    message TypeWithArguments {
+        required Type type = 1;
+        repeated Argument arguments = 2;
+    }
+
+    required string name = 1;
+    repeated TypeWithArguments type = 2;
+}
+
+message Relation {
+    required string name = 1;
+    required int32 segment_id = 2;
+    required int64 sizeInPages = 3;
+    repeated Attribute attributes = 4;
+}
+
+message Schema {
+    repeated Relation relations = 1;
+}
