@@ -17,9 +17,23 @@ Slot SlottedPage::lookup(uint64_t slotId) const {
     return *(firstSlot + slotId);
 }
 
+inline Slot* SlottedPage::getSlot(uint64_t slotId) const {
+    return firstSlot + slotId;
+}
+
 Record SlottedPage::readRecord(const Slot& slot) const {
     char* recordPos = static_cast<char*>(data) + slot.getOffset();
     return Record(slot.getLength(), recordPos);
+}
+
+bool SlottedPage::removeRecord(uint64_t slotId) {
+    Slot* slot = getSlot(slotId);
+    header->freeSpace -= slot->getLength();
+    if(slotId < header->firstFreeSlot){
+        header->firstFreeSlot = slotId;
+    }
+
+    slot->setFree();
 }
 
 bool SlottedPage::spaceAvailableFor(const Record& record) const {
@@ -30,7 +44,7 @@ bool SlottedPage::spaceAvailableFor(const Record& record) const {
 
 uint32_t SlottedPage::insertRecord(const Record& record) {
     //create new slot
-    Slot* slot = firstSlot + header->slotCount;
+    Slot* slot = getSlot(header->slotCount);
     slot->setLength(record.getLen());
     slot->setOffset(header->dataStart - record.getLen());
     header->slotCount++;
