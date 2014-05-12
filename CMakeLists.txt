@@ -1,19 +1,14 @@
 project(HeapDB)
 cmake_minimum_required(VERSION 2.8)
+include(FindProtobuf)
 
 set(CMAKE_CXX_FLAGS "-std=c++11 -O0 -pthread -W -Wall -Wextra")
 
-
-#TODO: correct pathes!
-set(PROTOBUF_INCLUDE_DIR "../HeapDB/protobuf-2.5.0/src")
-set(PROTOBUF_PROTOC_EXECUTABLE "../HeapDB/protobuf-2.5.0/src/protoc")
 find_package(Protobuf REQUIRED)
-
 include_directories(${PROTOBUF_INCLUDE_DIRS})
 
-
-
 include_directories("BufferManager")
+
 add_executable(test-twoq "BufferManager/main.cpp"
                          "BufferManager/concurrentlist.cpp"
                          "BufferManager/concurrentlist_simple.cpp"
