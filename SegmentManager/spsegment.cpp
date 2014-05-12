@@ -34,6 +34,7 @@ TID SPSegment::insert(const Record& r) {
     BufferFrame& bf = buffermanager.fixPage(segmentId, newPageId, true);
     SlottedPage sp(bf.getData(), PAGESIZE);
     sp.getHeader().dataStart = PAGESIZE;
+    sp.getHeader().freeSpace = PAGESIZE;
     sp.getHeader().slotCount = 0;
     uint32_t slotNr = sp.insertRecord(r);
     buffermanager.unfixPage(bf, true);
@@ -44,7 +45,9 @@ TID SPSegment::insert(const Record& r) {
 }
 
 bool SPSegment::remove(TID tid) {
-
+    BufferFrame& bf = buffermanager.fixPage(segmentId, getPageId(tid), true);
+    SlottedPage sp(bf.getData(), PAGESIZE);
+    sp.removeRecord(getSlotId(tid));
 }
 
 Record SPSegment::lookup(TID tid) {

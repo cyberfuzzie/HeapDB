@@ -89,6 +89,15 @@ public:
         data = (data & 0xffffffffff000000) | (length & 0x00ffffff);
     }
 
+    bool isFree() const{
+        //offset == 0 and length == 0 ?
+        return (data & 0xffffffffffff) == 0;
+    }
+
+    void setFree(){
+        data = (data & 0x000000000000);
+    }
+
 
 };
 
@@ -96,7 +105,9 @@ class SlottedPage {
     public:
         SlottedPage(void* data, uint32_t size);
         Slot lookup(uint64_t slotId) const;
-        Record readRecord(const Slot& slot);     
+        Slot* getSlot(uint64_t slotId);
+        Record readRecord(const Slot& slot);
+        bool removeRecord(uint64_t slotId);
         /**
          * @brief spaceAvailableFor
          * @param record
