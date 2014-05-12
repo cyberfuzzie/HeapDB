@@ -10,9 +10,17 @@ struct Header {
     uint64_t lsn;
     uint16_t slotCount;
     uint16_t firstFreeSlot;
+    /**
+     * @brief dataStart Number of first occupied byte on the page.
+     *  (First here is meant from the beginning of the page,
+     *  all data follows after this point.)
+     */
     uint32_t dataStart;
-    //space in bytes that would be available after
-    //compactification
+
+    /**
+     * @brief freeSpace space in bytes that would
+     *  be available after compactification
+     */
     uint16_t freeSpace;
 };
 
@@ -37,6 +45,11 @@ public:
         data = other.data;
         other.data = 0;
         return *this;
+    }
+
+    // Copy-contructor
+    Slot(Slot& other): data(other.data){
+
     }
 
     bool isRedirect() const {
@@ -83,11 +96,27 @@ class SlottedPage {
     public:
         SlottedPage(void* data, uint32_t size);
         Slot lookup(uint64_t slotId) const;
-        Record readRecord(const Slot& slot);
+        Record readRecord(const Slot& slot);     
+        /**
+         * @brief spaceAvailableFor
+         * @param record
+         * @return whether enough space is available for the given record.
+         */
+        bool spaceAvailableFor(const Record& record);
+        /**
+         * @brief insertRecord Inserts the given record on this page.
+         *          Fails silently if there is not enough space! Make sure to check before
+         *          calling.
+         * @param record
+         * @return the slotnumber of the record
+         */
+        uint32_t insertRecord(const Record& record);
+
+        Header& getHeader();
     private:
         union {
             Header* header;
-            void* data;
+            char* data;
         };
         uint32_t size;
         Slot* firstSlot;

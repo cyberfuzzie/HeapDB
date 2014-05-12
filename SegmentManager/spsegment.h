@@ -18,9 +18,12 @@ class SPSegment {
         bool update(TID tid, const Record& r);
     private:
         BufferManager& buffermanager;
-        const uint64_t segmenId;
+        const uint64_t segmentId;
         uint64_t pageCount;
         Slot getSlot(TID tid);
+        uint64_t getSlotId(TID tid);
+        uint64_t getPageId(TID tid);
+        TID makeTID(uint64_t pageID, uint64_t slotNr);
 };
 
 #endif // SPSEGMENT_H
