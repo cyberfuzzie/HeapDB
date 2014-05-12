@@ -8,8 +8,7 @@
 
 
 
-class SPSegment
-{
+class SPSegment {
 public:
     SPSegment();
     TID insert(const Record& r);
