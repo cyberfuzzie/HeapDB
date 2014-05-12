@@ -10,7 +10,11 @@ SlottedPage::SlottedPage(void *data, uint32_t size)
 }
 
 void SlottedPage::initialize() {
-
+    header->lsn = 0;
+    header->slotCount = 0;
+    header->firstFreeSlot = 0;
+    header->dataStart = size;
+    header->freeSpace = size - sizeof(Header);
 }
 
 Slot SlottedPage::lookup(uint64_t slotId) const {
@@ -34,6 +38,7 @@ bool SlottedPage::removeRecord(uint64_t slotId) {
     }
 
     slot->setFree();
+    return true;
 }
 
 bool SlottedPage::spaceAvailableFor(const Record& record) const {
@@ -44,9 +49,19 @@ bool SlottedPage::spaceAvailableFor(const Record& record) const {
 
 uint32_t SlottedPage::insertRecord(const Record& record) {
     //create new slot
-    Slot* slot = getSlot(header->slotCount);
+    uint32_t nextFreeSlot = header->firstFreeSlot;
+    Slot* slot = getSlot(nextFreeSlot);
+    while (++nextFreeSlot < header->slotCount) {
+        if (slot[nextFreeSlot].isFree()) {
+            break;
+        }
+    }
+    header->firstFreeSlot = nextFreeSlot;
     slot->setLength(record.getLen());
-    slot->setOffset(header->dataStart - record.getLen());
+
+    header->dataStart -= record.getLen();
+    header->freeSpace -= record.getLen();
+    slot->setOffset(header->dataStart);
     header->slotCount++;
 
     //put data

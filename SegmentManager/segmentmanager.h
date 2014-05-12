@@ -1,17 +1,20 @@
 #ifndef SEGMENTMANAGER_H
 #define SEGMENTMANAGER_H
 
+// Forward declaration
+class SegmentManager;
+
 #include "buffermanager.h"
 #include "spsegment.h"
 
 #include "schema.pb.h"
 
-class SegmentManager
-{
+class SegmentManager {
     public:
         SegmentManager(BufferManager& bufman);
         bool createSegment(const char* relationName);
-        SPSegment getSegment(const char* relationName) const;
+        SPSegment getSegment(const char* relationName);
+        void segmentResized(const SPSegment& segment);
     private:
         void writeSchema();
         BufferManager& bm;

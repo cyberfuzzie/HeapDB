@@ -3,21 +3,32 @@
 
 #include <cstdint>
 
+// Forward declarations
+class SPSegment;
+
 #include "record.h"
 #include "tid.h"
+#include "segmentmanager.h"
 #include "buffermanager.h"
 #include "slottedpage.h"
 
 
 class SPSegment {
     public:
-        SPSegment(BufferManager& bufman, uint64_t segId, uint64_t pgcount);
+        SPSegment(SPSegment&& other);
+        SPSegment(SegmentManager& segman, BufferManager& bufman, uint64_t segId, uint64_t pgcount);
+
+        uint64_t getSegmentId() const;
+        uint64_t getPageCount() const;
+
         TID insert(const Record& r);
         bool remove(TID tid);
         Record lookup(TID tid);
         bool update(TID tid, const Record& r);
+
     private:
-        BufferManager& buffermanager;
+        SegmentManager& sm;
+        BufferManager& bm;
         const uint64_t segmentId;
         uint64_t pageCount;
         Slot getSlot(TID tid);

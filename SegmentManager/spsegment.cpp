@@ -6,54 +6,69 @@
 
 using namespace std;
 
-SPSegment::SPSegment(BufferManager& bufman, uint64_t segId, uint64_t pgCount)
-    : buffermanager(bufman),
+SPSegment::SPSegment(SPSegment&& other)
+    : sm(other.sm),
+      bm(other.bm),
+      segmentId(other.segmentId),
+      pageCount(other.pageCount) {
+}
+
+SPSegment::SPSegment(SegmentManager& segman, BufferManager& bufman, uint64_t segId, uint64_t pgCount)
+    : sm(segman),
+      bm(bufman),
       segmentId(segId),
       pageCount(pgCount) {
+}
+
+uint64_t SPSegment::getSegmentId() const {
+    return segmentId;
+}
+
+uint64_t SPSegment::getPageCount() const {
+    return pageCount;
 }
 
 TID SPSegment::insert(const Record& r) {
 
     //TODO: what to do with records that are bigger than pagesize - header - slot?
 
-    for (uint64_t pageId = 0; pageId < pageCount; ++pageId){
+    for (uint64_t pageId = 0; pageId < pageCount; ++pageId) {
         // ask all pages kindly to be the new home for our record
-        BufferFrame& bf = buffermanager.fixPage(segmentId, pageId, true);
+        BufferFrame& bf = bm.fixPage(segmentId, pageId, true);
         SlottedPage sp(bf.getData(), PAGESIZE);
-        if (sp.spaceAvailableFor(r)){
+        if (sp.spaceAvailableFor(r)) {
             uint32_t slotNr = sp.insertRecord(r);
-            buffermanager.unfixPage(bf, true);
+            bm.unfixPage(bf, true);
             return makeTID(pageId, slotNr);
-        }else{
-            buffermanager.unfixPage(bf, false);
+        } else {
+            bm.unfixPage(bf, false);
         }
     }
 
     //In case no page had enough space:
     uint64_t newPageId = pageCount;
-    BufferFrame& bf = buffermanager.fixPage(segmentId, newPageId, true);
+    BufferFrame& bf = bm.fixPage(segmentId, newPageId, true);
     SlottedPage sp(bf.getData(), PAGESIZE);
-    sp.getHeader().dataStart = PAGESIZE;
-    sp.getHeader().freeSpace = PAGESIZE;
-    sp.getHeader().slotCount = 0;
+    sp.initialize();
     uint32_t slotNr = sp.insertRecord(r);
-    buffermanager.unfixPage(bf, true);
+    bm.unfixPage(bf, true);
 
     pageCount++;
+    sm.segmentResized(*this);
 
     return makeTID(newPageId, slotNr);
 }
 
 bool SPSegment::remove(TID tid) {
-    BufferFrame& bf = buffermanager.fixPage(segmentId, getPageId(tid), true);
+    BufferFrame& bf = bm.fixPage(segmentId, getPageId(tid), true);
     SlottedPage sp(bf.getData(), PAGESIZE);
-    sp.removeRecord(getSlotId(tid));
+    return sp.removeRecord(getSlotId(tid));
 }
 
 Record SPSegment::lookup(TID tid) {
     uint64_t pageId = getPageId(tid);
     uint64_t slotId = getSlotId(tid);
-    BufferFrame& bf = buffermanager.fixPage(segmentId, pageId, false);
+    BufferFrame& bf = bm.fixPage(segmentId, pageId, false);
     SlottedPage sp(bf.getData(), PAGESIZE);
     Slot s = sp.lookup(slotId);
     if (s.isRedirect()) {
@@ -61,14 +76,14 @@ Record SPSegment::lookup(TID tid) {
         slotId = getSlotId(s.getRedirect());
         //TODO: should this locking be the other way around?
         //Somebody might change the redirect while we follow it
-        buffermanager.unfixPage(bf, false);
-        buffermanager.fixPage(segmentId, pageId, false);
+        bm.unfixPage(bf, false);
+        bm.fixPage(segmentId, pageId, false);
         sp = SlottedPage(bf.getData(), PAGESIZE);
         s = sp.lookup(slotId);
     }
     assert(s.isRedirect() == false);
     Record rec(sp.readRecord(s));
-    buffermanager.unfixPage(bf, false);
+    bm.unfixPage(bf, false);
     return rec;
 }
 
@@ -78,12 +93,7 @@ bool SPSegment::update(TID tid, const Record& r) {
 
 }
 
-
-Slot SPSegment::getSlot(TID tid) {
-
-}
-
-inline uint64_t SPSegment::getPageId(TID tid) const{
+inline uint64_t SPSegment::getPageId(TID tid) const {
     return (tid >> 24);
 }
 
@@ -91,6 +101,6 @@ inline uint64_t SPSegment::getSlotId(TID tid) const{
     return (tid & 0xffffff);
 }
 
-inline TID SPSegment::makeTID(uint64_t pageID, uint64_t slotNr) const{
+inline TID SPSegment::makeTID(uint64_t pageID, uint64_t slotNr) const {
     return ((pageID << 24) | (slotNr & 0xffffff));
 }

@@ -73,7 +73,7 @@ public:
     }
 
     uint32_t getOffset() const {
-        return (data >> 32) & 0xffffff;
+        return (data >> 24) & 0xffffff;
     }
 
     void setOffset(uint32_t offset) {
