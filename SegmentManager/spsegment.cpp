@@ -83,14 +83,14 @@ Slot SPSegment::getSlot(TID tid) {
 
 }
 
-inline uint64_t SPSegment::getPageId(TID tid){
+inline uint64_t SPSegment::getPageId(TID tid) const{
     return (tid >> 24);
 }
 
-inline uint64_t SPSegment::getSlotId(TID tid){
+inline uint64_t SPSegment::getSlotId(TID tid) const{
     return (tid & 0xffffff);
 }
 
-inline TID SPSegment::makeTID(uint64_t pageID, uint64_t slotNr){
-    return ((pageID << 24) | slotNr & 0xffffff);
+inline TID SPSegment::makeTID(uint64_t pageID, uint64_t slotNr) const{
+    return ((pageID << 24) | (slotNr & 0xffffff));
 }

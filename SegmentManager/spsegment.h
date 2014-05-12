@@ -21,9 +21,9 @@ class SPSegment {
         const uint64_t segmentId;
         uint64_t pageCount;
         Slot getSlot(TID tid);
-        uint64_t getSlotId(TID tid);
-        uint64_t getPageId(TID tid);
-        TID makeTID(uint64_t pageID, uint64_t slotNr);
+        uint64_t getSlotId(TID tid) const;
+        uint64_t getPageId(TID tid) const;
+        TID makeTID(uint64_t pageID, uint64_t slotNr) const;
 };
 
 #endif // SPSEGMENT_H
