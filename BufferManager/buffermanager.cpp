@@ -109,6 +109,11 @@ BufferFrame& BufferManager::fixPage(uint64_t pageId, bool exclusive) {
     }
 }
 
+BufferFrame& BufferManager::fixPage(uint64_t segmentId, uint64_t pageId, bool exclusive) {
+    uint64_t combinedPageId = (segmentId << 40) | (pageId & 0xffffffffff);
+    return fixPage(combinedPageId, exclusive);
+}
+
 void BufferManager::unfixPage(BufferFrame& frame, bool isDirty) {
     // give up the lock on the BufferFrame
     // decrease the reference counter

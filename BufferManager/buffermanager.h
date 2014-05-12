@@ -13,14 +13,13 @@
 
 using namespace std;
 
-class BufferManager
-{
+class BufferManager {
     public:
         BufferManager(uint64_t size);
         virtual ~BufferManager();
         BufferFrame& fixPage(uint64_t pageId, bool exclusive);
+        BufferFrame& fixPage(uint64_t segmentId, uint64_t pageId, bool exclusive);
         void unfixPage(BufferFrame& frame, bool isDirty);
-
     private:
         unique_ptr<BufferFrame[]> frames;
         BufferManagerHashTable mappedPages;
