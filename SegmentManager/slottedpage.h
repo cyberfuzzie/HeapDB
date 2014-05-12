@@ -95,14 +95,28 @@ public:
 class SlottedPage {
     public:
         SlottedPage(void* data, uint32_t size);
+
+        /**
+         * @brief initialize a new slotted page
+         */
+        void initialize();
+
+        /**
+         * @brief lookup
+         * @param slotId
+         * @return the slot for the given slotId
+         */
         Slot lookup(uint64_t slotId) const;
-        Record readRecord(const Slot& slot);     
+
+        Record readRecord(const Slot& slot) const;
+
         /**
          * @brief spaceAvailableFor
          * @param record
          * @return whether enough space is available for the given record.
          */
-        bool spaceAvailableFor(const Record& record);
+        bool spaceAvailableFor(const Record& record) const;
+
         /**
          * @brief insertRecord Inserts the given record on this page.
          *          Fails silently if there is not enough space! Make sure to check before
@@ -112,7 +126,7 @@ class SlottedPage {
          */
         uint32_t insertRecord(const Record& record);
 
-        Header& getHeader();
+        Header& getHeader() const;
     private:
         union {
             Header* header;

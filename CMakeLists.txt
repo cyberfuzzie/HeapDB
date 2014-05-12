@@ -29,18 +29,22 @@ add_executable(test-buffermanager-concurrent "BufferManager/test-buffermanager-c
                                              "BufferManager/twoq.cpp"
                                              "BufferManager/emptyexception.cpp")
 
-add_executable(test-segment-manager "SegmentManager/test-segment-manager.cpp"
-                                    "SegmentManager/slottedpage.cpp"
-                                    "SegmentManager/spsegment.cpp"
-                                    "SegmentManager/record.cpp"
-                                    "BufferManager/bufferframe.cpp"
-                                    "BufferManager/buffermanager.cpp"
-                                    "BufferManager/buffermanagerhashtable.cpp"
-                                    "BufferManager/twoq.cpp"
-                                    "BufferManager/emptyexception.cpp")
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS "SegmentManager/schema.proto")
+
+add_executable(test-segmentmanager "SegmentManager/test-segmentmanager.cpp"
+                                   "SegmentManager/segmentmanager.cpp"
+                                   "SegmentManager/slottedpage.cpp"
+                                   "SegmentManager/spsegment.cpp"
+                                   "SegmentManager/record.cpp"
+                                   "BufferManager/bufferframe.cpp"
+                                   "BufferManager/buffermanager.cpp"
+                                   "BufferManager/buffermanagerhashtable.cpp"
+                                   "BufferManager/twoq.cpp"
+                                   "BufferManager/emptyexception.cpp"
+                                   ${PROTO_SRCS} ${PROTO_HDRS})
+target_link_libraries(test-segmentmanager ${PROTOBUF_LIBRARIES})
 
 add_executable(schema-test "SegmentManager/schema-test.cpp"
                            "SegmentManager/record.cpp"
