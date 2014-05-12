@@ -1,6 +1,8 @@
 #ifndef BUFFERFRAME_H
 #define BUFFERFRAME_H
 
+#define PAGESIZE 4096
+
 #include <atomic>
 #include <memory>
 

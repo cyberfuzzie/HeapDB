@@ -1,6 +1,4 @@
 
-#define PAGESIZE 4096
-
 #include "bufferframe.h"
 
 #include <cassert>

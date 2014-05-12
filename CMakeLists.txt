@@ -31,12 +31,20 @@ add_executable(test-buffermanager-concurrent "BufferManager/test-buffermanager-c
 
 add_executable(test-segment-manager "SegmentManager/test-segment-manager.cpp"
                                     "SegmentManager/slottedpage.cpp"
-                                    "SegmentManager/spsegment.cpp")
+                                    "SegmentManager/spsegment.cpp"
+                                    "SegmentManager/record.cpp"
+                                    "BufferManager/bufferframe.cpp"
+                                    "BufferManager/buffermanager.cpp"
+                                    "BufferManager/buffermanagerhashtable.cpp"
+                                    "BufferManager/twoq.cpp"
+                                    "BufferManager/emptyexception.cpp")
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS "SegmentManager/schema.proto")
 
-add_executable(schema-test "SegmentManager/schema-test.cpp" ${PROTO_SRCS} ${PROTO_HDRS})
+add_executable(schema-test "SegmentManager/schema-test.cpp"
+                           "SegmentManager/record.cpp"
+                           ${PROTO_SRCS} ${PROTO_HDRS})
 target_link_libraries(schema-test ${PROTOBUF_LIBRARIES})
 
 # Dummy library to "use" all .cpp files
