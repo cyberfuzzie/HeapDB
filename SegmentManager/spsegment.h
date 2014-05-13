@@ -12,6 +12,9 @@ class SPSegment;
 #include "buffermanager.h"
 #include "slottedpage.h"
 
+typedef uint64_t SlotID;
+typedef uint64_t PageID;
+
 
 class SPSegment {
     public:
@@ -32,8 +35,8 @@ class SPSegment {
         const uint64_t segmentId;
         uint64_t pageCount;
         Slot getSlot(TID tid);
-        uint64_t getSlotId(TID tid) const;
-        uint64_t getPageId(TID tid) const;
+        SlotID getSlotId(TID tid) const;
+        PageID getPageId(TID tid) const;
         static TID makeTID(uint64_t pageID, uint64_t slotNr);
 
         /**

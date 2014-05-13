@@ -72,8 +72,8 @@ bool SPSegment::remove(TID tid) {
 }
 
 Record SPSegment::lookup(TID tid) {
-    uint64_t pageId = getPageId(tid);
-    uint64_t slotId = getSlotId(tid);
+    PageID pageId = getPageId(tid);
+    SlotID slotId = getSlotId(tid);
     BufferFrame& bf = bm.fixPage(segmentId, pageId, false);
     SlottedPage sp(bf.getData(), PAGESIZE);
     Slot s = sp.lookup(slotId);
@@ -96,15 +96,15 @@ Record SPSegment::lookup(TID tid) {
 
 
 bool SPSegment::update(TID tid, const Record& r) {
-    uint64_t pageId = getPageId(tid);
-    uint64_t slotId = getSlotId(tid);
+    PageID pageId = getPageId(tid);
+    SlotID slotId = getSlotId(tid);
     BufferFrame& bf = bm.fixPage(segmentId, pageId, true);
     SlottedPage sp(bf.getData(), PAGESIZE);
     Slot s = sp.lookup(slotId);
 
     if (s.isRedirect()){
-        uint64_t referredPageId = getPageId(tid);
-        uint64_t referredSlotId = getSlotId(tid);
+        PageID referredPageId = getPageId(tid);
+        SlotID referredSlotId = getSlotId(tid);
         //TO DISCUSS: May cause deadlock
         BufferFrame& referredbf = bm.fixPage(segmentId, referredPageId, true);
         SlottedPage referredsp(bf.getData(), PAGESIZE);
@@ -152,11 +152,11 @@ bool SPSegment::update(TID tid, const Record& r) {
     }
 }
 
-inline uint64_t SPSegment::getPageId(TID tid) const {
+inline PageID SPSegment::getPageId(TID tid) const {
     return (tid >> 24);
 }
 
-inline uint64_t SPSegment::getSlotId(TID tid) const{
+inline SlotID SPSegment::getSlotId(TID tid) const{
     return (tid & 0xffffff);
 }
 
