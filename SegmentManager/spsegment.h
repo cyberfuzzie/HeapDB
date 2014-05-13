@@ -34,7 +34,17 @@ class SPSegment {
         Slot getSlot(TID tid);
         uint64_t getSlotId(TID tid) const;
         uint64_t getPageId(TID tid) const;
-        TID makeTID(uint64_t pageID, uint64_t slotNr) const;
+        static TID makeTID(uint64_t pageID, uint64_t slotNr);
+
+        /**
+         * @brief insert Inserts record without trying to insert it
+         *  into pageIdToExlude when exclude is true.
+         * @param r
+         * @param exclude
+         * @param pageIdToExclude
+         * @return
+         */
+        TID insert(const Record&r, bool exclude, uint64_t pageIdToExclude);
 };
 
 #endif // SPSEGMENT_H

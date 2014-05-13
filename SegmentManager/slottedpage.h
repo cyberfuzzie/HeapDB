@@ -117,6 +117,8 @@ class SlottedPage {
          */
         Slot lookup(uint64_t slotId) const;
 
+        void redirect(uint64_t slotId, TID tid);
+
         Record readRecord(const Slot& slot) const;
 
         Slot* getSlot(uint64_t slotId) const;
@@ -127,7 +129,16 @@ class SlottedPage {
          * @param record
          * @return whether enough space is available for the given record.
          */
-        bool spaceAvailableFor(const Record& record) const;
+        bool spaceAvailableForInsert(const Record& record) const;
+
+        /**
+         * @brief spaceAvailableForUpdate
+         * @param slotId
+         * @param record
+         * @return whether enough space is availabe to replace the record at the given slot
+         *  with the given record or to delete it and append in free space on page
+         */
+        bool spaceAvailableForUpdate(const uint64_t slotId, const Record& record) const;
 
         /**
          * @brief insertRecord Inserts the given record on this page.
@@ -138,6 +149,15 @@ class SlottedPage {
          */
         uint32_t insertRecord(const Record& record);
 
+        /**
+         * @brief updateRecord Updates the record at the given slotId with the provided record.
+         *  Fails silently if there is not enough space! Make sure to check before calling.
+         * @param slotId
+         * @param record
+         * @return the slotnumber where the updated record was positioned.
+         */
+        bool updateRecord(const uint64_t slotId, const Record& record);
+
         Header& getHeader() const;
     private:
         union {
@@ -146,6 +166,8 @@ class SlottedPage {
         };
         uint32_t size;
         Slot* firstSlot;
+        void dataToPage(const Slot* slot, const Record& record);
+        void putRecordAtDataStart(Slot* slot, Header* header, const Record& record);
 };
 
 #endif // SLOTTEDPAGE_H

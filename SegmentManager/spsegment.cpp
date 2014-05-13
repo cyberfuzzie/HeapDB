@@ -29,14 +29,20 @@ uint64_t SPSegment::getPageCount() const {
 }
 
 TID SPSegment::insert(const Record& r) {
+    return insert(r, false, 0);
+}
 
+TID SPSegment::insert(const Record&r, bool exclude, uint64_t pageIdToExclude){
     //TODO: what to do with records that are bigger than pagesize - header - slot?
 
     for (uint64_t pageId = 0; pageId < pageCount; ++pageId) {
+        if (exclude && pageIdToExclude == pageId){
+            continue;
+        }
         // ask all pages kindly to be the new home for our record
         BufferFrame& bf = bm.fixPage(segmentId, pageId, true);
         SlottedPage sp(bf.getData(), PAGESIZE);
-        if (sp.spaceAvailableFor(r)) {
+        if (sp.spaceAvailableForInsert(r)) {
             uint32_t slotNr = sp.insertRecord(r);
             bm.unfixPage(bf, true);
             return makeTID(pageId, slotNr);
@@ -90,7 +96,60 @@ Record SPSegment::lookup(TID tid) {
 
 
 bool SPSegment::update(TID tid, const Record& r) {
+    uint64_t pageId = getPageId(tid);
+    uint64_t slotId = getSlotId(tid);
+    BufferFrame& bf = bm.fixPage(segmentId, pageId, true);
+    SlottedPage sp(bf.getData(), PAGESIZE);
+    Slot s = sp.lookup(slotId);
 
+    if (s.isRedirect()){
+        uint64_t referredPageId = getPageId(tid);
+        uint64_t referredSlotId = getSlotId(tid);
+        //TO DISCUSS: May cause deadlock
+        BufferFrame& referredbf = bm.fixPage(segmentId, referredPageId, true);
+        SlottedPage referredsp(bf.getData(), PAGESIZE);
+
+        if (sp.spaceAvailableForUpdate(slotId, r)){
+            //There is enough space for record on original page
+            referredsp.removeRecord(referredSlotId);
+            bm.unfixPage(referredbf, true);
+
+            bool updated = sp.updateRecord(slotId, r);
+            bm.unfixPage(bf, true);
+            return updated;
+        }else if (referredsp.spaceAvailableForUpdate(referredSlotId, r)){
+            bm.unfixPage(bf, true);
+
+            bool updated = sp.updateRecord(slotId, r);
+            bm.unfixPage(referredbf, true);
+            return updated;
+        }else{
+            //There is enough space for record on originally referred page
+            referredsp.removeRecord(referredSlotId);
+            bm.unfixPage(referredbf, true);
+
+            //insert record in new position and redirect to it
+            TID newTID = insert(r, true, pageId);
+            sp.redirect(slotId, newTID);
+            bm.unfixPage(bf, true);
+            return true;
+        }
+
+    }else{
+        //In case record is not redirected
+        if (sp.spaceAvailableForUpdate(slotId, r)){
+            //updated records fits into old position
+            bool updated = sp.updateRecord(slotId, r);
+            bm.unfixPage(bf, true);
+            return updated;
+        }else{
+            //insert record in new position and make slot a redirect
+            TID newTID = insert(r, true, pageId);
+            sp.redirect(slotId, newTID);
+            bm.unfixPage(bf, true);
+            return true;
+        }
+    }
 }
 
 inline uint64_t SPSegment::getPageId(TID tid) const {
@@ -101,6 +160,6 @@ inline uint64_t SPSegment::getSlotId(TID tid) const{
     return (tid & 0xffffff);
 }
 
-inline TID SPSegment::makeTID(uint64_t pageID, uint64_t slotNr) const {
+inline TID SPSegment::makeTID(uint64_t pageID, uint64_t slotNr) {
     return ((pageID << 24) | (slotNr & 0xffffff));
 }
