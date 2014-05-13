@@ -33,7 +33,6 @@ void SlottedPage::redirect(uint64_t slotId, TID tid)
 }
 
 inline Slot* SlottedPage::getSlot(uint64_t slotId) const {
-    assert(slotId < header->slotCount);
     return firstSlot + slotId;
 }
 
