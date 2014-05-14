@@ -53,8 +53,13 @@ int main(int argc, char** argv) {
 
    // Setting everything
    BufferManager bm(100);
-   // TODO ...
-   SPSegment& sp = 
+   SegmentManager sm(bm);
+   try {
+       sm.getSegment("test");
+   } catch (int e) {
+       sm.createSegment("test");
+   }
+   SPSegment sp = sm.getSegment("test");
    Random64 rnd;
 
    // Insert some records
@@ -65,8 +70,9 @@ int main(int argc, char** argv) {
 
       // Check that there is space available for 's'
       bool full = true;
-      for (unsigned p=0; p<initialSize; ++p) {
-         if (usage[p] < loadFactor*pageSize) {
+      unsigned p;
+      for (p=0; p<initialSize; ++p) {
+         if ((usage[p] + s.size()) < loadFactor*pageSize) {
             full = false;
             break;
          }
