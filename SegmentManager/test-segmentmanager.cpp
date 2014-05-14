@@ -13,7 +13,12 @@ int main() {
         sm.createSegment("test");
     }
     SPSegment seg = sm.getSegment("test");
-    char test[12] = "Hallo Welt!";
-    Record r(12, test);
-    seg.insert(r);
+    srand (time(NULL));
+    int random = rand();
+    Record record(sizeof(int), reinterpret_cast<char*>(&random));
+    TID insertedTid = seg.insert(record);
+    Record readRecord = seg.lookup(insertedTid);
+    int readRandom = *(reinterpret_cast<const int*>(readRecord.getData()));
+    assert(random == readRandom);
+    return 0;
 }
