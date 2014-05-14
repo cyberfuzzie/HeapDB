@@ -61,6 +61,7 @@ bool BufferFrame::trywrlock() {
 void BufferFrame::unlock() {
     this->writePossible = false;
     assert(this->writePossible == false);
+    assert(lock.__data.__nr_readers > 0 || lock.__data.__writer != 0);
     int result = pthread_rwlock_unlock(&lock);
     assert(result == 0);
 }
