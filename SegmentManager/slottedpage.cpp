@@ -91,6 +91,7 @@ uint32_t SlottedPage::insertRecord(const Record& record) {
 }
 
 inline void SlottedPage::putRecordAtDataStart(Slot* slot, Header* header, const Record& record){
+    slot->setRedirectFalse();
     slot->setLength(record.getLen());
 
     header->dataStart -= record.getLen();
@@ -108,6 +109,7 @@ bool SlottedPage::updateRecord(const uint64_t slotId, const Record& record){
         return false;
     }
 
+    slot->setRedirectFalse();
     if (record.getLen() <= slot->getLength()){
         //Put record to old position in case it fits
         dataToPage(slot, record);

@@ -53,7 +53,7 @@ public:
     }
 
     bool isRedirect() const {
-        return t == 0xff;
+        return t != 0xff;
     }
 
     void redirectTo(TID otherRecord) {

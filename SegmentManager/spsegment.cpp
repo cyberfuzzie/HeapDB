@@ -76,22 +76,22 @@ bool SPSegment::remove(TID tid) {
 Record SPSegment::lookup(TID tid) {
     PageID pageId = getPageId(tid);
     SlotID slotId = getSlotId(tid);
-    BufferFrame& bf = bm.fixPage(segmentId, pageId, false);
-    SlottedPage sp(bf.getData(), PAGESIZE);
+    BufferFrame* bf = &(bm.fixPage(segmentId, pageId, false));
+    SlottedPage sp(bf->getData(), PAGESIZE);
     Slot s = sp.lookup(slotId);
     if (s.isRedirect()) {
         pageId = getPageId(s.getRedirect());
         slotId = getSlotId(s.getRedirect());
         //TODO: should this locking be the other way around?
         //Somebody might change the redirect while we follow it
-        bm.unfixPage(bf, false);
-        BufferFrame& bf = bm.fixPage(segmentId, pageId, false);
-        sp = SlottedPage(bf.getData(), PAGESIZE);
+        bm.unfixPage(*bf, false);
+        bf = &(bm.fixPage(segmentId, pageId, false));
+        sp = SlottedPage(bf->getData(), PAGESIZE);
         s = sp.lookup(slotId);
     }
     assert(s.isRedirect() == false);
     Record rec(sp.readRecord(s));
-    bm.unfixPage(bf, false);
+    bm.unfixPage(*bf, false);
     return rec;
 }
 
@@ -104,14 +104,15 @@ bool SPSegment::update(TID tid, const Record& r) {
     SlottedPage sp(bf.getData(), PAGESIZE);
     Slot s = sp.lookup(slotId);
 
-    if (s.isRedirect()){
-        PageID referredPageId = getPageId(tid);
-        SlotID referredSlotId = getSlotId(tid);
+    if (s.isRedirect()) {
+        TID referredTID = s.getRedirect();
+        PageID referredPageId = getPageId(referredTID);
+        SlotID referredSlotId = getSlotId(referredTID);
         //TO DISCUSS: May cause deadlock
         BufferFrame& referredbf = bm.fixPage(segmentId, referredPageId, true);
-        SlottedPage referredsp(bf.getData(), PAGESIZE);
+        SlottedPage referredsp(referredbf.getData(), PAGESIZE);
 
-        if (sp.spaceAvailableForUpdate(slotId, r)){
+        if (sp.spaceAvailableForUpdate(slotId, r)) {
             //There is enough space for record on original page
             referredsp.removeRecord(referredSlotId);
             bm.unfixPage(referredbf, true);
@@ -119,35 +120,43 @@ bool SPSegment::update(TID tid, const Record& r) {
             bool updated = sp.updateRecord(slotId, r);
             bm.unfixPage(bf, true);
             return updated;
-        }else if (referredsp.spaceAvailableForUpdate(referredSlotId, r)){
+        } else if (referredsp.spaceAvailableForUpdate(referredSlotId, r)) {
+            //There is enough space for record on originally referred page
             bm.unfixPage(bf, true);
 
-            bool updated = sp.updateRecord(slotId, r);
+            bool updated = referredsp.updateRecord(referredSlotId, r);
             bm.unfixPage(referredbf, true);
             return updated;
-        }else{
-            //There is enough space for record on originally referred page
+        } else {
+            //Other page is needed for new referred slot
             referredsp.removeRecord(referredSlotId);
             bm.unfixPage(referredbf, true);
 
             //insert record in new position and redirect to it
+            //do not scan page pageId to prevent deadlock, we have already locked it
             TID newTID = insert(r, true, pageId);
             sp.redirect(slotId, newTID);
+            Slot redirectionSlot = sp.lookup(slotId);
+            assert(redirectionSlot.isRedirect());
+            assert(redirectionSlot.getRedirect() == newTID);
             bm.unfixPage(bf, true);
             return true;
         }
 
-    }else{
+    } else {
         //In case record is not redirected
-        if (sp.spaceAvailableForUpdate(slotId, r)){
+        if (sp.spaceAvailableForUpdate(slotId, r)) {
             //updated records fits into old position
             bool updated = sp.updateRecord(slotId, r);
             bm.unfixPage(bf, true);
             return updated;
-        }else{
+        } else {
             //insert record in new position and make slot a redirect
             TID newTID = insert(r, true, pageId);
             sp.redirect(slotId, newTID);
+            Slot redirectionSlot = sp.lookup(slotId);
+            assert(redirectionSlot.isRedirect());
+            assert(redirectionSlot.getRedirect() == newTID);
             bm.unfixPage(bf, true);
             return true;
         }
