@@ -72,9 +72,9 @@ bool SlottedPage::spaceAvailableForUpdate(const uint64_t slotId, const Record& r
 uint32_t SlottedPage::insertRecord(const Record& record) {
     //create new slot
     uint32_t nextFreeSlot = header->firstFreeSlot;
-    Slot* slot = getSlot(nextFreeSlot);
+    uint32_t insertedSlot = nextFreeSlot;
+    Slot* slot = getSlot(insertedSlot);
     while (++nextFreeSlot < header->slotCount) {
-        //REVIEW: changed slot to firstSlot, because nextFreeSlot is an absolute index. Correct?
         if (firstSlot[nextFreeSlot].isFree()) {
             break;
         }
@@ -87,7 +87,7 @@ uint32_t SlottedPage::insertRecord(const Record& record) {
 
     putRecordAtDataStart(slot, header, record);
 
-    return header->slotCount - 1;
+    return insertedSlot;
 }
 
 inline void SlottedPage::putRecordAtDataStart(Slot* slot, Header* header, const Record& record){

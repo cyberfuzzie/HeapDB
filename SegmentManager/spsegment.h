@@ -18,8 +18,14 @@ typedef uint64_t PageID;
 
 class SPSegment {
     public:
-        SPSegment(SPSegment&& other);
         SPSegment(SegmentManager& segman, BufferManager& bufman, uint64_t segId, uint64_t pgcount);
+        // Move Constructor
+        SPSegment(SPSegment&& other);
+        // Copy Constructor: deleted
+        SPSegment(SPSegment& other) = delete;
+
+        // Assignment Operator: deleted
+        SPSegment& operator=(SPSegment& rhs) = delete;
 
         uint64_t getSegmentId() const;
         uint64_t getPageCount() const;

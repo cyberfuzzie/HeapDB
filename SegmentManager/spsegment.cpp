@@ -83,7 +83,7 @@ Record SPSegment::lookup(TID tid) {
         //TODO: should this locking be the other way around?
         //Somebody might change the redirect while we follow it
         bm.unfixPage(bf, false);
-        bm.fixPage(segmentId, pageId, false);
+        BufferFrame& bf = bm.fixPage(segmentId, pageId, false);
         sp = SlottedPage(bf.getData(), PAGESIZE);
         s = sp.lookup(slotId);
     }
