@@ -68,7 +68,9 @@ TID SPSegment::insert(const Record&r, bool exclude, uint64_t pageIdToExclude){
 bool SPSegment::remove(TID tid) {
     BufferFrame& bf = bm.fixPage(segmentId, getPageId(tid), true);
     SlottedPage sp(bf.getData(), PAGESIZE);
-    return sp.removeRecord(getSlotId(tid));
+    bool result = sp.removeRecord(getSlotId(tid));
+    bm.unfixPage(bf, true);
+    return result;
 }
 
 Record SPSegment::lookup(TID tid) {
