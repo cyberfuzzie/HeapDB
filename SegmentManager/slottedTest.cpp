@@ -15,7 +15,7 @@ uint64_t extractPage(TID tid) {
    return tid >> 24;
 }
 
-const unsigned initialSize = 100; // in (slotted) pages
+const unsigned initialSize = 1000; // in (slotted) pages
 const unsigned totalSize = initialSize+50; // in (slotted) pages
 const unsigned maxInserts = 1000ul*1000ul;
 const unsigned maxDeletes = 10ul*1000ul;
@@ -54,12 +54,18 @@ int main(int argc, char** argv) {
    // Setting everything
    BufferManager bm(100);
    SegmentManager sm(bm);
+   srand(time(NULL));
+   char relName[20] = { 0 };
    try {
-       sm.getSegment("test");
+       while (true) {
+           int segmentNum = rand();
+           snprintf(relName, 20, "%d", segmentNum);
+           sm.getSegment(relName);
+       }
    } catch (int e) {
-       sm.createSegment("test");
+       sm.createSegment(relName);
    }
-   SPSegment sp = sm.getSegment("test");
+   SPSegment sp = sm.getSegment(relName);
    Random64 rnd;
 
    // Insert some records
@@ -123,6 +129,9 @@ int main(int argc, char** argv) {
 
       // Replace old with new value
       sp.update(tid, Record(s.size(), s.c_str()));
+      Record rec = sp.lookup(tid);
+      assert(rec.getLen() == s.size());
+      assert(memcmp(rec.getData(), s.c_str(), s.size())==0);
       values[tid]=r;
    }
 
