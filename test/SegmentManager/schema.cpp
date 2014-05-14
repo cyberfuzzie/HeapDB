@@ -2,11 +2,12 @@
 
 #include <string>
 #include <fstream>
-#include <iostream>
+
+#include "gtest.h"
 
 using namespace std;
 
-int main() {
+TEST(Schema, SimpleReadWrite) {
 
     string name = "Test-Relation";
 
@@ -25,6 +26,5 @@ int main() {
     s2.ParseFromIstream(&input);
     input.close();
 
-    assert(s2.relations(0).name() == name);
-    cout << "Test ok.";
+    ASSERT_TRUE(name == s2.relations(0).name());
 }

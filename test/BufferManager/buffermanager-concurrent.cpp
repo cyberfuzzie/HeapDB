@@ -8,6 +8,8 @@
 #include <assert.h>
 #include <pthread.h>
 
+#include "gtest.h"
+
 using namespace std;
 
 BufferManager* bm;
@@ -36,7 +38,7 @@ static void* scan(void *arg) {
       for (unsigned page=start; page<start+10; page++) {
          BufferFrame& bf = bm->fixPage(page, false);
          unsigned newcount = reinterpret_cast<unsigned*>(bf.getData())[0];
-         assert(counters[page]<=newcount);
+         assert(counters[page] <= newcount);
          counters[page]=newcount;
          bm->unfixPage(bf, false);
       }
@@ -65,15 +67,12 @@ static void* readWrite(void *arg) {
    return reinterpret_cast<void*>(count);
 }
 
-int main(int argc, char** argv) {
-   if (argc==4) {
-      pagesOnDisk = atoi(argv[1]);
-      pagesInRAM = atoi(argv[2]);
-      threadCount = atoi(argv[3]);
-   } else {
-      cerr << "usage: " << argv[0] << " <pagesOnDisk> <pagesInRAM> <threads>" << endl;
-      exit(1);
-   }
+TEST(BufferManager, ProvidedTest) {
+
+   pagesOnDisk = 4096;
+   pagesInRAM = 64;
+   threadCount = 3;
+
 
    threadSeed = new unsigned[threadCount];
    for (unsigned i=0; i<threadCount; i++)
@@ -85,7 +84,6 @@ int main(int argc, char** argv) {
    pthread_attr_t pattr;
    pthread_attr_init(&pattr);
 
-   cout << "initializing pages " << endl;
 
    // set all counters to 0
    for (unsigned i=0; i<pagesOnDisk; i++) {
@@ -93,8 +91,6 @@ int main(int argc, char** argv) {
       reinterpret_cast<unsigned*>(bf.getData())[0]=0;
       bm->unfixPage(bf, true);
    }
-
-   cout << "starting test " << endl;
 
    // start scan thread
    pthread_t scanThread;
@@ -119,8 +115,6 @@ int main(int argc, char** argv) {
    // restart buffer manager
    delete bm;
    bm = new BufferManager(pagesInRAM);
-   
-   cout << "checking result " << endl;
 
    // check counter
    unsigned totalCountOnDisk = 0;
@@ -135,12 +129,9 @@ int main(int argc, char** argv) {
 
    // result output
    if (totalCount==totalCountOnDisk) {
-      cout << "test successful" << endl;
       delete bm;
-      return 0;
    } else {
-      cerr << "error: expected " << totalCount << " but got " << totalCountOnDisk << endl;
       delete bm;
-      return 1;
+      ASSERT_TRUE(false) << "error: expected " << totalCount << " but got " << totalCountOnDisk << endl;
    }
 }

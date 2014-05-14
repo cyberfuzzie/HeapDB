@@ -4,65 +4,26 @@ include(FindProtobuf)
 
 set(CMAKE_CXX_FLAGS "-std=c++11 -O0 -pthread -W -Wall -Wextra")
 
+
+
 find_package(Protobuf REQUIRED)
 include_directories(${PROTOBUF_INCLUDE_DIRS})
-
-include_directories("BufferManager")
-
-add_executable(test-twoq "BufferManager/main.cpp"
-                         "BufferManager/concurrentlist.cpp"
-                         "BufferManager/concurrentlist_simple.cpp"
-                         "BufferManager/concurrentstack.cpp"
-                         "BufferManager/emptyexception.cpp")
-add_executable(test-buffermanager "BufferManager/test-buffermanager.cpp"
-                                  "BufferManager/bufferframe.cpp"
-                                  "BufferManager/buffermanager.cpp"
-                                  "BufferManager/buffermanagerhashtable.cpp"
-                                  "BufferManager/replacementmanager.cpp"
-                                  "BufferManager/twoq.cpp"
-                                  "BufferManager/emptyexception.cpp")
-add_executable(test-buffermanager-concurrent "BufferManager/test-buffermanager-concurrent.cpp"
-                                             "BufferManager/bufferframe.cpp"
-                                             "BufferManager/buffermanager.cpp"
-                                             "BufferManager/buffermanagerhashtable.cpp"
-                                             "BufferManager/replacementmanager.cpp"
-                                             "BufferManager/twoq.cpp"
-                                             "BufferManager/emptyexception.cpp")
-
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS "SegmentManager/schema.proto")
 
-add_executable(test-segmentmanager "SegmentManager/test-segmentmanager.cpp"
-                                   "SegmentManager/segmentmanager.cpp"
-                                   "SegmentManager/slottedpage.cpp"
-                                   "SegmentManager/spsegment.cpp"
-                                   "SegmentManager/record.cpp"
-                                   "BufferManager/bufferframe.cpp"
-                                   "BufferManager/buffermanager.cpp"
-                                   "BufferManager/buffermanagerhashtable.cpp"
-                                   "BufferManager/twoq.cpp"
-                                   "BufferManager/emptyexception.cpp"
-                                   ${PROTO_SRCS} ${PROTO_HDRS})
-target_link_libraries(test-segmentmanager ${PROTOBUF_LIBRARIES})
+include_directories("gtest" "SegmentManager" "BufferManager")
 
-add_executable(slottedTest "SegmentManager/slottedTest.cpp"
-                           "SegmentManager/segmentmanager.cpp"
-                           "SegmentManager/slottedpage.cpp"
-                           "SegmentManager/spsegment.cpp"
-                           "SegmentManager/record.cpp"
-                           "BufferManager/bufferframe.cpp"
-                           "BufferManager/buffermanager.cpp"
-                           "BufferManager/buffermanagerhashtable.cpp"
-                           "BufferManager/twoq.cpp"
-                           "BufferManager/emptyexception.cpp"
-                           ${PROTO_SRCS} ${PROTO_HDRS})
-target_link_libraries(slottedTest ${PROTOBUF_LIBRARIES})
+file(GLOB_RECURSE TEST_FILES "test/*.cpp")
+file(GLOB_RECURSE BUFFER_MANAGER_FILES "BufferManager/*.cpp")
+file(GLOB_RECURSE SEGMENT_MANAGER_FILES "SegmentManager/*.cpp")
 
-add_executable(schema-test "SegmentManager/schema-test.cpp"
-                           "SegmentManager/record.cpp"
-                           ${PROTO_SRCS} ${PROTO_HDRS})
-target_link_libraries(schema-test ${PROTOBUF_LIBRARIES})
+add_executable(run-all-tests "gtest/gtest_main.cc"
+                     "gtest/gtest-all.cc"
+                     ${TEST_FILES}
+                     ${BUFFER_MANAGER_FILES}
+                     ${SEGMENT_MANAGER_FILES}
+                     ${PROTO_SRCS} ${PROTO_HDRS}
+)
+target_link_libraries(run-all-tests ${PROTOBUF_LIBRARIES})
 
-# Dummy library to "use" all .cpp files
-add_library(dummy "BufferManager/twoq.cpp" )

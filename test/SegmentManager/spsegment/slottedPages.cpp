@@ -8,6 +8,8 @@
 #include "segmentmanager.h" // include your stuff here
 #include "record.h"
 
+#include "gtest.h"
+
 using namespace std;
 
 // todo: adapt to your implementation
@@ -39,13 +41,9 @@ class Random64 {
    }
 };
 
-int main(int argc, char** argv) {
-   // Check arguments
-   if (argc != 2) {
-      cerr << "usage: " << argv[0] << " <pageSize>" << endl;
-      return -1;
-   }
-   const unsigned pageSize = atoi(argv[1]);
+TEST(SegmentManager, ProvidedTest) {
+
+   const unsigned pageSize = 4096;
 
    // Bookkeeping
    unordered_map<TID, unsigned> values; // TID -> testData entry
@@ -88,10 +86,10 @@ int main(int argc, char** argv) {
 
       // Insert record
       TID tid = sp.insert(Record(s.size(), s.c_str()));
-      assert(values.find(tid)==values.end()); // TIDs should not be overwritten
+      ASSERT_TRUE(values.find(tid)==values.end()); // TIDs should not be overwritten
       values[tid]=r;
       unsigned pageId = extractPage(tid); // extract the pageId from the TID
-      assert(pageId < initialSize); // pageId should be within [0, initialSize)
+      ASSERT_TRUE(pageId < initialSize); // pageId should be within [0, initialSize)
       usage[pageId]+=s.size();
    }
 
@@ -108,11 +106,11 @@ int main(int argc, char** argv) {
 
       // Lookup
       Record rec = sp.lookup(tid);
-      assert(rec.getLen() == len);
-      assert(memcmp(rec.getData(), value.c_str(), len)==0);
+      ASSERT_TRUE(rec.getLen() == len);
+      ASSERT_TRUE(memcmp(rec.getData(), value.c_str(), len)==0);
 
       if (del) { // do delete
-         assert(sp.remove(tid));
+         ASSERT_TRUE(sp.remove(tid));
          values.erase(tid);
          usage[pageId]-=len;
       }
@@ -130,8 +128,8 @@ int main(int argc, char** argv) {
       // Replace old with new value
       sp.update(tid, Record(s.size(), s.c_str()));
       Record rec = sp.lookup(tid);
-      assert(rec.getLen() == s.size());
-      assert(memcmp(rec.getData(), s.c_str(), s.size())==0);
+      ASSERT_TRUE(rec.getLen() == s.size());
+      ASSERT_TRUE(memcmp(rec.getData(), s.c_str(), s.size())==0);
       values[tid]=r;
    }
 
@@ -141,9 +139,7 @@ int main(int argc, char** argv) {
       const std::string& value = testData[p.second];
       unsigned len = value.size();
       Record rec = sp.lookup(tid);
-      assert(rec.getLen() == len);
-      assert(memcmp(rec.getData(), value.c_str(), len)==0);
+      ASSERT_TRUE(rec.getLen() == len);
+      ASSERT_TRUE(memcmp(rec.getData(), value.c_str(), len)==0);
    }
-
-   return 0;
 }

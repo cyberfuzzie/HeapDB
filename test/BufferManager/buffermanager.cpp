@@ -4,9 +4,13 @@
 
 #include <iostream>
 
+#include "gtest.h"
+
 using namespace std;
 
-int main(int argc, char** argv) {
+TEST(BufferManager, simpleReadWrite) {
+
+    //TODO: transform this into a real test
     BufferManager mgr(16);
     BufferFrame& frm1 = mgr.fixPage(1, false);
     cout << "Got BufferFrame at " << &frm1 << endl;
@@ -24,5 +28,4 @@ int main(int argc, char** argv) {
     cout << "Got BufferFrame at " << &frm4 << endl;
     cout << "BufferFrame has pointer " << frm4.getData() << endl;
     mgr.unfixPage(frm4, true);
-    return 0;
 }

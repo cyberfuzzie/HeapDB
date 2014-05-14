@@ -4,7 +4,9 @@
 #include "spsegment.h"
 #include "record.h"
 
-int main() {
+#include "gtest.h"
+
+TEST(SegmentManager, SimpleWriteRead) {
     BufferManager bm(100);
     SegmentManager sm(bm);
     try {
@@ -19,6 +21,5 @@ int main() {
     TID insertedTid = seg.insert(record);
     Record readRecord = seg.lookup(insertedTid);
     int readRandom = *(reinterpret_cast<const int*>(readRecord.getData()));
-    assert(random == readRandom);
-    return 0;
+    ASSERT_TRUE(random == readRandom);
 }

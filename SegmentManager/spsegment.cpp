@@ -66,6 +66,7 @@ TID SPSegment::insert(const Record&r, bool exclude, uint64_t pageIdToExclude){
 }
 
 bool SPSegment::remove(TID tid) {
+    //TODO: remove also other tuple when redirected
     BufferFrame& bf = bm.fixPage(segmentId, getPageId(tid), true);
     SlottedPage sp(bf.getData(), PAGESIZE);
     bool result = sp.removeRecord(getSlotId(tid));

@@ -4,7 +4,7 @@
 
 //using namespace std;
 
-int main()
+int maint()
 {
 
    /* uint64_t size = 8;
