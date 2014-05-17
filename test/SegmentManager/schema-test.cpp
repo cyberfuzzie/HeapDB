@@ -14,8 +14,8 @@ TEST(Schema, SimpleReadWrite) {
     schema::Schema s;
     schema::Relation* r = s.add_relations();
     r->set_name(name);
-    r->set_segment_id(5);
-    r->set_sizeinpages(9);
+    r->mutable_segment()->set_segment_id(5);
+    r->mutable_segment()->set_sizeinpages(9);
 
     fstream output("testrelation", ios::out | ios::binary);
     s.SerializeToOstream(&output);

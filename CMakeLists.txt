@@ -4,7 +4,7 @@ include(FindProtobuf)
 
 set(CMAKE_CXX_FLAGS "-std=c++11 -O0 -pthread -W -Wall -Wextra")
 
-
+set(PROTOBUF_PROTOC_EXECUTABLE "/usr/local/bin/protoc")
 
 find_package(Protobuf REQUIRED)
 include_directories(${PROTOBUF_INCLUDE_DIRS})

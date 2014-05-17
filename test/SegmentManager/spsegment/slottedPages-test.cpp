@@ -51,7 +51,8 @@ TEST(SegmentManager, ProvidedTest) {
 
    // Setting everything
    BufferManager bm(100);
-   SegmentManager sm(bm);
+   SchemaManager scm;
+   SegmentManager sm(bm, scm);
    srand(time(NULL));
    char relName[20] = { 0 };
    try {

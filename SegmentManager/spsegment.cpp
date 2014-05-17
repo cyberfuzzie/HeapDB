@@ -7,26 +7,18 @@
 using namespace std;
 
 SPSegment::SPSegment(SPSegment&& other)
-    : sm(other.sm),
-      bm(other.bm),
-      segmentId(other.segmentId),
-      pageCount(other.pageCount) {
+    : Segment(other.scm, other.getSegmentId(), other.getPageCount()),
+      bm(other.bm)
+       {
 }
 
-SPSegment::SPSegment(SegmentManager& segman, BufferManager& bufman, uint64_t segId, uint64_t pgCount)
-    : sm(segman),
-      bm(bufman),
-      segmentId(segId),
-      pageCount(pgCount) {
+SPSegment::SPSegment(SchemaManager& schemaManager, BufferManager& bufman, uint64_t segId, uint64_t pgCount)
+    : Segment(schemaManager, segId, pgCount),
+      bm(bufman)
+       {
 }
 
-uint64_t SPSegment::getSegmentId() const {
-    return segmentId;
-}
 
-uint64_t SPSegment::getPageCount() const {
-    return pageCount;
-}
 
 TID SPSegment::insert(const Record& r) {
     return insert(r, false, 0);
@@ -35,12 +27,12 @@ TID SPSegment::insert(const Record& r) {
 TID SPSegment::insert(const Record&r, bool exclude, uint64_t pageIdToExclude){
     //TODO: what to do with records that are bigger than pagesize - header - slot?
 
-    for (uint64_t pageId = 0; pageId < pageCount; ++pageId) {
+    for (uint64_t pageId = 0; pageId < getPageCount(); ++pageId) {
         if (exclude && pageIdToExclude == pageId){
             continue;
         }
         // ask all pages kindly to be the new home for our record
-        BufferFrame& bf = bm.fixPage(segmentId, pageId, true);
+        BufferFrame& bf = bm.fixPage(getSegmentId(), pageId, true);
         SlottedPage sp(bf.getData(), PAGESIZE);
         if (sp.spaceAvailableForInsert(r)) {
             uint32_t slotNr = sp.insertRecord(r);
@@ -52,15 +44,14 @@ TID SPSegment::insert(const Record&r, bool exclude, uint64_t pageIdToExclude){
     }
 
     //In case no page had enough space:
-    uint64_t newPageId = pageCount;
-    BufferFrame& bf = bm.fixPage(segmentId, newPageId, true);
+    uint64_t newPageId = getPageCount();
+    BufferFrame& bf = bm.fixPage(getSegmentId(), newPageId, true);
     SlottedPage sp(bf.getData(), PAGESIZE);
     sp.initialize();
     uint32_t slotNr = sp.insertRecord(r);
     bm.unfixPage(bf, true);
 
-    pageCount++;
-    sm.segmentResized(*this);
+    incrementPageCount();
 
     return makeTID(newPageId, slotNr);
 }

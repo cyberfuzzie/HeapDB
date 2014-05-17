@@ -1,40 +1,38 @@
 #include "segmentmanager.h"
 
+#include "schemamanager.h"
+
 #include <fstream>
 
 using std::fstream;
 
-SegmentManager::SegmentManager(BufferManager& bufman)
-    : bm(bufman) {
-    fstream input("segment0", ios::in | ios::binary);
-    bool parseOk = schema.ParseFromIstream(&input);
-    input.close();
-    if (!parseOk) {
-        schema.Clear();
-        writeSchema();
-    }
+SegmentManager::SegmentManager(BufferManager& bufman, SchemaManager &schemaManager)
+    : bm(bufman),
+      scm(schemaManager)
+{
+
 }
 
 bool SegmentManager::createSegment(const char* relationName) {
-    int32_t nextSegmentId = 0;
-    for (int64_t i = 0; i < schema.relations_size(); i++) {
-        nextSegmentId = max(nextSegmentId, schema.relations(i).segment_id());
+    uint32_t nextSegmentId = 0;
+    for (int64_t i = 0; i < scm.getSchema().relations_size(); i++) {
+        nextSegmentId = max(nextSegmentId, scm.getSchema().relations(i).segment().segment_id());
     }
     nextSegmentId++;
-    schema::Relation* r = schema.add_relations();
+    schema::Relation* r = scm.getSchema().add_relations();
     r->set_name(relationName);
-    r->set_segment_id(nextSegmentId);
-    r->set_sizeinpages(0);
-    writeSchema();
+    r->mutable_segment()->set_segment_id(nextSegmentId);
+    r->mutable_segment()->set_sizeinpages(0);
+    scm.writeSchema();
     return true;
 }
 
 SPSegment SegmentManager::getSegment(const char* relationName) {
-    for (int64_t i = 0; i < schema.relations_size(); i++) {
-        if ( schema.relations(i).name().compare(relationName) == 0 ) {
-            uint64_t segmentId = schema.relations(i).segment_id();
-            uint64_t pageCount = schema.relations(i).sizeinpages();
-            return SPSegment(*this, bm, segmentId, pageCount);
+    for (int64_t i = 0; i < scm.getSchema().relations_size(); i++) {
+        if ( scm.getSchema().relations(i).name().compare(relationName) == 0 ) {
+            uint64_t segmentId = scm.getSchema().relations(i).segment().segment_id();
+            uint64_t pageCount = scm.getSchema().relations(i).segment().sizeinpages();
+            return SPSegment(scm, bm, segmentId, pageCount);
         }
     }
     // nothing found
@@ -42,17 +40,4 @@ SPSegment SegmentManager::getSegment(const char* relationName) {
     throw 0;
 }
 
-void SegmentManager::segmentResized(const SPSegment& segment) {
-    for (int64_t i = 0; i < schema.relations_size(); i++) {
-        if (schema.relations(i).segment_id() == segment.getSegmentId()) {
-            schema.mutable_relations(i)->set_sizeinpages(segment.getPageCount());
-        }
-    }
-    writeSchema();
-}
 
-void SegmentManager::writeSchema() {
-    fstream output("segment0", ios::out | ios::binary);
-    schema.SerializeToOstream(&output);
-    output.close();
-}

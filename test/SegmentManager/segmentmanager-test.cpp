@@ -1,5 +1,6 @@
 
 #include "buffermanager.h"
+#include "schemamanager.h"
 #include "segmentmanager.h"
 #include "spsegment.h"
 #include "record.h"
@@ -8,7 +9,8 @@
 
 TEST(SegmentManager, SimpleWriteRead) {
     BufferManager bm(100);
-    SegmentManager sm(bm);
+    SchemaManager scm;
+    SegmentManager sm(bm, scm);
     try {
         sm.getSegment("test");
     } catch (int e) {

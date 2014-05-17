@@ -5,20 +5,20 @@
 class SegmentManager;
 
 #include "buffermanager.h"
+#include "schemamanager.h"
+#include "segment.h"
 #include "spsegment.h"
 
 #include "schema.pb.h"
 
 class SegmentManager {
     public:
-        SegmentManager(BufferManager& bufman);
+        SegmentManager(BufferManager& bufman, SchemaManager& schemaManager);
         bool createSegment(const char* relationName);
         SPSegment getSegment(const char* relationName);
-        void segmentResized(const SPSegment& segment);
     private:
-        void writeSchema();
         BufferManager& bm;
-        schema::Schema schema;
+        SchemaManager& scm;
 };
 
 #endif // SEGMENTMANAGER_H

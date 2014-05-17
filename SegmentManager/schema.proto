@@ -27,13 +27,29 @@ message Attribute {
     repeated TypeWithArguments type = 2;
 }
 
+message Segment {
+    required uint32 segment_id = 1;
+    required uint64 sizeInPages = 2;
+}
+
 message Relation {
     required string name = 1;
-    required int32 segment_id = 2;
-    required int64 sizeInPages = 3;
+    required Segment segment = 5;
     repeated Attribute attributes = 4;
+}
+
+message Index {
+
+    enum IndexType {
+        BPlusTree = 1;
+    }
+
+    required string relationName = 1;
+    required Segment segment = 2;
+    required IndexType indexType = 3;
 }
 
 message Schema {
     repeated Relation relations = 1;
+    repeated Index indices = 2;
 }
