@@ -1,10 +1,11 @@
 #include "segment.h"
 #include "schemamanager.h"
 
-Segment::Segment(SchemaManager& schemaManager, uint64_t segId, uint64_t pgcount)
+Segment::Segment(SchemaManager& schemaManager, uint64_t segId, uint64_t pgcount, uint32_t ps)
     : scm(schemaManager),
       segmentId{segId},
-      pageCount{pgcount}
+      pageCount{pgcount},
+      pageSize{ps}
 {
 
 }

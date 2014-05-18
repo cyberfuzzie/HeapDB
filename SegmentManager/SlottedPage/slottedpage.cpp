@@ -16,7 +16,7 @@ void SlottedPage::initialize() {
     header->slotCount = 0;
     header->firstFreeSlot = 0;
     header->dataStart = size;
-    header->freeSpace = size - sizeof(Header);
+    header->freeSpace = size - sizeof(BPlusHeader);
 }
 
 Slot SlottedPage::lookup(uint64_t slotId) const {
@@ -53,7 +53,7 @@ bool SlottedPage::removeRecord(uint64_t slotId) {
 
 bool SlottedPage::spaceAvailableForInsert(const Record& record) const {
     unsigned rlength = record.getLen();
-    uint64_t freeAfterDataStart = header->dataStart - sizeof(Header) - (header->slotCount * sizeof(Slot));
+    uint64_t freeAfterDataStart = header->dataStart - sizeof(BPlusHeader) - (header->slotCount * sizeof(Slot));
     return rlength + sizeof(Slot) <= freeAfterDataStart;
 }
 
@@ -63,7 +63,7 @@ bool SlottedPage::spaceAvailableForUpdate(const uint64_t slotId, const Record& r
         return true;
     }else{
         unsigned rlength = record.getLen();
-        uint64_t freeAfterDataStart = header->dataStart - sizeof(Header) - (header->slotCount * sizeof(Slot));
+        uint64_t freeAfterDataStart = header->dataStart - sizeof(BPlusHeader) - (header->slotCount * sizeof(Slot));
         return rlength <= freeAfterDataStart;
     }
 
@@ -90,7 +90,7 @@ uint32_t SlottedPage::insertRecord(const Record& record) {
     return insertedSlot;
 }
 
-inline void SlottedPage::putRecordAtDataStart(Slot* slot, Header* header, const Record& record){
+inline void SlottedPage::putRecordAtDataStart(Slot* slot, BPlusHeader* header, const Record& record){
     slot->setRedirectFalse();
     slot->setLength(record.getLen());
 
@@ -128,7 +128,7 @@ void SlottedPage::dataToPage(const Slot* slot,const Record& record){
     memcpy(data + slot->getOffset(), record.getData(), record.getLen());
 }
 
-Header &SlottedPage::getHeader() const {
+BPlusHeader &SlottedPage::getHeader() const {
     return *header;
 }
 

@@ -16,12 +16,11 @@ class SPSegment;
 
 
 typedef uint64_t SlotID;
-typedef uint64_t PageID;
 
 
 class SPSegment :public Segment {
     public:
-        SPSegment(SchemaManager& schemaManager, BufferManager& bufman, uint64_t segId, uint64_t pgcount);
+        SPSegment(SchemaManager& schemaManager, BufferManager& bufman, uint64_t segId, uint64_t pgcount, uint32_t pageSize);
         // Move Constructor
         SPSegment(SPSegment&& other);
         // Copy Constructor: deleted

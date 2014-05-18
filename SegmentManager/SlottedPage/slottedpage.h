@@ -6,7 +6,7 @@
 #include "record.h"
 #include "tid.h"
 
-struct Header {
+struct BPlusHeader {
     uint64_t lsn;
     uint16_t slotCount;
     uint16_t firstFreeSlot;
@@ -158,16 +158,16 @@ class SlottedPage {
          */
         bool updateRecord(const uint64_t slotId, const Record& record);
 
-        Header& getHeader() const;
+        BPlusHeader& getHeader() const;
     private:
         union {
-            Header* header;
+            BPlusHeader* header;
             char* data;
         };
         uint32_t size;
         Slot* firstSlot;
         void dataToPage(const Slot* slot, const Record& record);
-        void putRecordAtDataStart(Slot* slot, Header* header, const Record& record);
+        void putRecordAtDataStart(Slot* slot, BPlusHeader* header, const Record& record);
 };
 
 #endif // SLOTTEDPAGE_H

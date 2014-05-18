@@ -7,13 +7,13 @@
 using namespace std;
 
 SPSegment::SPSegment(SPSegment&& other)
-    : Segment(other.scm, other.getSegmentId(), other.getPageCount()),
+    : Segment(other),
       bm(other.bm)
        {
 }
 
-SPSegment::SPSegment(SchemaManager& schemaManager, BufferManager& bufman, uint64_t segId, uint64_t pgCount)
-    : Segment(schemaManager, segId, pgCount),
+SPSegment::SPSegment(SchemaManager& schemaManager, BufferManager& bufman, uint64_t segId, uint64_t pgCount, uint32_t ps)
+    : Segment(schemaManager, segId, pgCount, ps),
       bm(bufman)
        {
 }
@@ -33,7 +33,7 @@ TID SPSegment::insert(const Record&r, bool exclude, uint64_t pageIdToExclude){
         }
         // ask all pages kindly to be the new home for our record
         BufferFrame& bf = bm.fixPage(getSegmentId(), pageId, true);
-        SlottedPage sp(bf.getData(), PAGESIZE);
+        SlottedPage sp(bf.getData(), pageSize);
         if (sp.spaceAvailableForInsert(r)) {
             uint32_t slotNr = sp.insertRecord(r);
             bm.unfixPage(bf, true);
