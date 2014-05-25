@@ -2,7 +2,7 @@
 #define BPLUSHEADER_H
 
 class BPlusHeader {
-
+public:
     bool leaf;
     uint64_t lsn;
     uint16_t count;
@@ -12,8 +12,13 @@ class BPlusHeader {
      *Upper is instead placed at beginning of K array
      */
 
-    bool isLeaf(){
-        return leaf == 0;
+    bool isLeaf() const{
+        return leaf;
+    }
+
+    void initialize() {
+        leaf = true;
+        count = 0;
     }
 };
 

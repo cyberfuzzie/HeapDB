@@ -1,15 +1,18 @@
-#include "bpluspage.h"
+#ifndef BPLUSPAGE_C
+#define BPLUSPAGE_C
 
 #include <cassert>
 
+#include "bpluspage.h"
+
 template<typename K, typename V>
-BPlusPage<K,V>::BPlusPage(void *data, uint32_t pageSize,
+BPlusPage<K,V>::BPlusPage(void* data, uint32_t pageSize,
                           bool (*compare)(const K&, const K&))
-    :header(data),
+    :header(static_cast<BPlusHeader*>(data)),
      pageSize{pageSize},
-     firstKey(header + 1),
-     firstValue{pageStart + pageSize - sizeof(V)},
-     cmp{compare}
+     firstKey(reinterpret_cast<K*>(header + 1)),
+     firstValue{reinterpret_cast<V*>(pageStart + pageSize - 2 * sizeof(V))},
+    cmp(compare)
 {
 
 }
@@ -17,28 +20,44 @@ BPlusPage<K,V>::BPlusPage(void *data, uint32_t pageSize,
 template<typename K, typename V>
 V BPlusPage<K,V>::lookup(const K &key) const
 {
-    uint32_t lowerBound = 0;
-    uint32_t upperBound = header->count - 1;
-    uint32_t element;
+    auto position = getPositionFor(key);
 
-    do{
-        element = lowerBound + ((upperBound - lowerBound) / 2);
-
-        if (cmp(key, getKey(element))){
-            upperBound = element;
-        }else{
-            lowerBound = element;
-        }
-
-    }while(lowerBound < upperBound);
-
-    if (!key == getKey(element)){
-        return getValue(element);
+    K foundKey = getKey(position);
+    if (key == foundKey){
+        return getValue(position);
     }else{
         //TODO: error
+        throw 0;
+    }
+
+}
+
+template<typename K, typename V>
+uint32_t BPlusPage<K,V>::getPositionFor(const K& key) const{
+    if (header->count == 0){
+        //TODO: proper error
         return 0;
     }
 
+    uint32_t lowerBound = 0;
+    uint32_t upperBound = header->count - 1;
+    uint32_t element = lowerBound + ((upperBound - lowerBound) / 2);
+
+    while(lowerBound < upperBound){
+
+        K& foundKey = getKey(element);
+        if (key == foundKey){
+            break;
+        }else if (cmp(key, foundKey)){
+            upperBound = element - 1;
+        }else{
+            lowerBound = element + 1;
+        }
+
+        element = lowerBound + ((upperBound - lowerBound) / 2);
+    };
+
+    return element;
 }
 
 template<typename K, typename V>
@@ -48,15 +67,47 @@ K& BPlusPage<K,V>::getKey(uint32_t number) const{
 
 template<typename K, typename V>
 V& BPlusPage<K,V>::getValue(uint32_t number) const{
-    //Values are stored starting from the back of the page.
-    //First value is upper reference, thus the first actual value is
-    //firstValue - 1
-   return *(firstValue - 1 - number);
+   return *(firstValue - number);
+}
+
+template<typename K, typename V>
+bool BPlusPage<K,V>::hasAdditionalSpace() const{
+    return  pageSize
+            - sizeof(BPlusHeader)
+            - (header->count + 1) * sizeof(K)
+            - (header->count + 2) * sizeof(V) > 0;
 }
 
 template<typename K, typename V>
 bool BPlusPage<K,V>::insert(const K &key, const V &value)
 {
+
+    auto position = getPositionFor(key);
+    V& valueAtPos = getValue(position);
+    K& keyAtPos = getKey(position);
+    if (header->count > 0 && valueAtPos == value){
+        return false;
+    }else if (header->count > 0 && cmp(keyAtPos, key)){
+        //In case the position search ended at a position where
+        //the stored key is "smaller" than the key to insert, move to the right
+        position++;
+        K& foundKey = getKey(position);
+        assert(header->count == position || !cmp(foundKey, key));
+    }
+
+    //move keys to make space for new key
+    memmove(firstKey + position + 1, firstKey + position, (header->count - position) * sizeof(K));
+    *(firstKey + position) = key;
+
+    //move values to make space for new value
+    memmove(firstValue - header->count,
+            firstValue - header->count + 1,
+            (header->count - position) * sizeof(V));
+    *(firstValue - position) = value;
+
+    header->count++;
+
+    return true;
 }
 
 template<typename K, typename V>
@@ -64,6 +115,15 @@ bool BPlusPage<K,V>::remove(const K &key)
 {
 }
 
+template<typename K, typename V>
+void BPlusPage<K, V>::initialize(){
+    header->initialize();
+}
 
+template<typename K, typename V>
+void BPlusPage<K, V>::setLeaf(const bool isLeaf)
+{
+    header->leaf = isLeaf;
+}
 
-
+#endif
