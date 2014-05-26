@@ -5,7 +5,15 @@
 #include "bplusheader.h"
 #include "notfoundexception.h"
 
+template<typename K, typename V>
+struct LookupResult{
+    K key;
+    V value;
 
+    LookupResult(K k, V v)
+        :key{k},
+          value{v}{}
+};
 
 
 template<typename K, typename V>
@@ -16,7 +24,7 @@ public:
               bool (*compare)(const K&, const K&));
 
     V lookup(const K& key) const;
-    V lookupSmallestGreaterThan(const K &key) const;
+    LookupResult<K, V> lookupSmallestGreaterThan(const K &key) const;
     bool insert(const K& key, const V& value);
     void update(const K& oldKey, const K& newKey);
     bool remove(const K& key);
@@ -29,6 +37,7 @@ public:
     void setUpperNotExists();
     void setUpper(V& value);
     K & getHighestKey();
+    V getValueOfHighestKey() const;
 
 private:
     union{

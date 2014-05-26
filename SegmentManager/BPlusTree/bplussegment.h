@@ -64,7 +64,7 @@ public:
     void insert(const K& key,const V& value);
     void erase(const K& key);
     V lookup(const K& key) const;
-    V findGreatestKey(PageID pageID) const;
+    V findGreatestKey(BufferFrame* startFrame) const;
     BPlus_iterator<V> lookupRange(const K& startKey) const;
     char* visualize();
 

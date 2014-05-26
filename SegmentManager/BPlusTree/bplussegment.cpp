@@ -3,6 +3,7 @@
 
 #include "bplussegment.h"
 
+#include <iostream>
 
 template<typename K, typename V>
 BPlusSegment<K,V>::BPlusSegment(bool (*comparator)(const K&, const K&),
@@ -23,35 +24,27 @@ BPlusSegment<K,V>::BPlusSegment(bool (*comparator)(const K&, const K&),
 template<typename K, typename V>
 void BPlusSegment<K,V>::insert(const K &key, const V &value)
 {
-
-    //TODO: handle NotFoundException
-
-    //TODO: locate without X lock
+    //TODO: (optional) locate without X lock
     //locate page
-    BufferFrame* targetPage;
     try{
-        targetPage = fixLeafFor(key, true);
+        BufferFrame& targetPage = *fixLeafFor(key, true);
+
+        BPlusPage<K,V> bpp(targetPage.getData(), pageSize, cmp);
+
+        //check if insert possible
+        if (bpp.hasAdditionalSpace()){
+            bpp.insert(key, value);
+            bm.unfixPage(targetPage, true);
+            return;
+        }
+        bm.unfixPage(targetPage, false);
+
     }catch(NotFoundException e){
-        //couldn't locate page because of missing upper page
-
+        //couldn't locate page because all keys are bigger than given key and upper
+        //doesn't exist, thus we continue with insertion case
     }
 
-    BPlusPage<K,V> bpp(targetPage->getData(), pageSize, cmp);
-
-    //check if insert possible
-    if (bpp.hasAdditionalSpace()){
-        //TODO: update key in parent?
-        //TODO: unfix parent
-        bpp.insert(key, value);
-        bm.unfixPage(*targetPage, true);
-    }else{
-        //not possible: lock path and split page
-        bm.unfixPage(*targetPage, false);
-
-        //TODO: handle upper insertion
-        insertAndSplit(key, value);
-    }
-
+    insertAndSplit(key, value);
 }
 
 
@@ -64,7 +57,6 @@ void BPlusSegment<K,V>::erase(const K &key)
 template<typename K, typename V>
 V BPlusSegment<K,V>::lookup(const K &key) const
 {
-    //TODO: manage NotFoundException
     BufferFrame& targetPage = *fixLeafFor(key, false);
 
     BPlusPage<K,V> bpp(targetPage.getData(), pageSize, cmp);
@@ -80,10 +72,13 @@ void BPlusSegment<K,V>::insertAndSplit(const K& key, const V& value){
 
     //update root if root has split
     if (result.hasSplit){
+        //TODO: handle upper
         PageID newRootId = pageCount;
         BufferFrame& newRootFrame = bm.fixPage(segmentId, newRootId, true);
         pageCount++;
-        BPlusPage<K, PageID> newRoot(newRootFrame.getData(), pageSize, cmp);
+        BPlusPage<K, PageID> newRoot(newRootFrame.getData(), pageSize, cmp);      
+        newRoot.initialize();
+        newRoot.setLeaf(false);
 
         newRoot.insert(result.pageHighestKey, root);
         newRoot.insert(result.siblingHighestKey, result.siblingPageID);
@@ -102,48 +97,64 @@ SplitResult<K> BPlusSegment<K,V>::insertAndSplit(const K& key, const V& value, c
 
     BufferFrame& frame = bm.fixPage(segmentId, pageID, true);
 
-    //TODO: what if split upper?
-
     if (isLeaf(frame.getData())){
+        BPlusPage<K, V> page(frame.getData(), pageSize, cmp);
 
-        //split the leaf
-        SplitResult<K> result = splitPage(frame, false);
+        if (page.hasAdditionalSpace()){
+            //Page still has space, this is the case when we used this method in order to propagate
+            //growing parent link
 
-        //insert key
-        BufferFrame* lowerSiblingFrame;
-        bool needsUnfix = false;
-        if (cmp(key, result.pageHighestKey)){
-            lowerSiblingFrame = &frame;
+            page.insert(key, value);
+
+            return SplitResult<K>(false, frame);
+
         }else{
-            lowerSiblingFrame = &bm.fixPage(segmentId, result.siblingPageID, true);
-            needsUnfix = true;
+
+            //split the leaf
+            SplitResult<K> result = splitPage(frame, false);
+
+            //insert key
+            BufferFrame* lowerSiblingFrame;
+            bool needsUnfix = false;
+            if (cmp(key, result.pageHighestKey)){
+                lowerSiblingFrame = &frame;
+            }else{
+                lowerSiblingFrame = &bm.fixPage(segmentId, result.siblingPageID, true);
+                needsUnfix = true;
+            }
+
+            BPlusPage<K, V> page(lowerSiblingFrame->getData(), pageSize, cmp);
+            page.insert(key, value);
+
+            if (needsUnfix){
+                bm.unfixPage(*lowerSiblingFrame, true);
+            }
+
+            return result;
         }
-
-        BPlusPage<K, V> page(lowerSiblingFrame->getData(), pageSize, cmp);
-        page.insert(key, value);
-
-        if (needsUnfix){
-            bm.unfixPage(*lowerSiblingFrame, true);
-        }
-
-        return result;
 
     //or locate the page we need to go to
     }else{
         bool highestKeyNeedsUpdate = false;
-
+        bool traversingUpper = false;
         BPlusPage<K, PageID> page(frame.getData(), pageSize, cmp);
         PageID nextPage;
+        K usedKey;
+
         try{
-            nextPage = page.lookupSmallestGreaterThan(key);
+            LookupResult<K, PageID> res = page.lookupSmallestGreaterThan(key);
+            nextPage = res.value;
+            usedKey = res.key;
         }catch(NotFoundException e){
             if(page.getUpperExists()){
                 //insert in upper if it exists
                 nextPage = page.getUpper();
+                traversingUpper = true;
             }else{
                 //insert in highest and increase the corresponding
                 //key if page is not yet full
-                nextPage = page.getHighestKey();
+                nextPage = page.getValueOfHighestKey();
+                usedKey = page.getHighestKey();
                 highestKeyNeedsUpdate = true;
             }
         }
@@ -154,7 +165,8 @@ SplitResult<K> BPlusSegment<K,V>::insertAndSplit(const K& key, const V& value, c
             //if the lower page was split: update the current page and insert the new sibling
             if (page.hasAdditionalSpace()){
                 //update original entry
-                page.update(key, result.pageHighestKey);
+                //TODO: key
+                page.update(usedKey, result.pageHighestKey);
                 //insert sibling
                 page.insert(result.siblingHighestKey, result.siblingPageID);
 
@@ -174,8 +186,10 @@ SplitResult<K> BPlusSegment<K,V>::insertAndSplit(const K& key, const V& value, c
             }else{
                 //must split current page to accomodate sibling
 
-                //update original entry with new lower max
-                page.update(key, result.pageHighestKey);
+                if (! traversingUpper){
+                    //update original entry with new lower max
+                    page.update(key, result.pageHighestKey);
+                }
 
                 //split self to make space for sibling
                 SplitResult<K> selfSplit = splitPage(frame, true);
@@ -227,11 +241,13 @@ SplitResult<K> BPlusSegment<K,V>::splitPage(BufferFrame &frame, const bool inner
         pageCount++;
         //notice: K, PageID here instead of V
         BPlusPage<K, PageID> sibling(siblingFrame.getData(), pageSize, cmp);
+        sibling.initialize();
+        sibling.setLeaf(false);
         sibling.takeUpperFrom(page);
 
         //handle upper key on split
         if (page.getUpperExists()){
-            K newKey = findGreatestKey(page.getUpper());
+            K newKey = findGreatestKey(&siblingFrame);
             sibling.insert(newKey, page.getUpper());
 
             page.setUpperNotExists();
@@ -249,6 +265,7 @@ SplitResult<K> BPlusSegment<K,V>::splitPage(BufferFrame &frame, const bool inner
         BufferFrame& siblingFrame = bm.fixPage(segmentId, siblingPageID, true);
         pageCount++;
         BPlusPage<K, V> sibling(siblingFrame.getData(), pageSize, cmp);
+        sibling.initialize();
         sibling.takeUpperFrom(page);
         K siblingHighestKey = sibling.getHighestKey();
         K pageHighestKey = page.getHighestKey();
@@ -259,9 +276,10 @@ SplitResult<K> BPlusSegment<K,V>::splitPage(BufferFrame &frame, const bool inner
 }
 
 template<typename K, typename V>
-V BPlusSegment<K, V>::findGreatestKey(PageID pageID) const{
+V BPlusSegment<K, V>::findGreatestKey(BufferFrame* startFrame) const{
 
-    BufferFrame* pageFrame = &bm.fixPage(segmentId, pageID, false);
+    BufferFrame* pageFrame = startFrame;
+    bool isFirst = true;
 
     while(!isLeaf(pageFrame->getData())){
         BPlusPage<K, PageID> page(pageFrame->getData(), pageSize, cmp);
@@ -269,17 +287,26 @@ V BPlusSegment<K, V>::findGreatestKey(PageID pageID) const{
         if (page.getUpperExists()){
             nextPage = page.getUpper();
         }else{
-            nextPage = page.lookup(page.getHighestKey());
+            nextPage = page.getValueOfHighestKey();
         }
 
         BufferFrame* oldBF = pageFrame;
         pageFrame = &bm.fixPage(segmentId, nextPage, false);
-        bm.unfixPage(*oldBF, false);
+        //don't unfix first frame, as it is controlled by caller
+        if (isFirst){
+            isFirst = false;
+        }else{
+            bm.unfixPage(*oldBF, false);
+        }
     }
 
     BPlusPage<K, V> page(pageFrame->getData(), pageSize, cmp);
 
-    return page.getHighestKey();
+    K highestKey = page.getHighestKey();
+
+    if (!isFirst) bm.unfixPage(*pageFrame, false);
+
+    return highestKey;
 }
 
 template<typename K, typename V>
@@ -291,13 +318,14 @@ BufferFrame* BPlusSegment<K,V>::fixLeafFor(const K& key, const bool exclusive) c
         BPlusPage<K, PageID> page(pageOfKey->getData(), pageSize, cmp);
         PageID nextPage;
         try{
-            nextPage = page.lookupSmallestGreaterThan(key);
+             nextPage = page.lookupSmallestGreaterThan(key).value;
         }catch(NotFoundException e){
             //upper exists?
             if (page.getUpperExists()){
                 nextPage = page.getUpper();
             }else{
-                throw e;
+                bm.unfixPage(*pageOfKey, false);
+                throw NotFoundException();
             }
         }
         BufferFrame* oldBF = pageOfKey;

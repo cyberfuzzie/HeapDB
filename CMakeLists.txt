@@ -32,3 +32,9 @@ add_executable(run-all-tests "gtest/gtest_main.cc"
 )
 target_link_libraries(run-all-tests ${PROTOBUF_LIBRARIES})
 
+add_executable(pblus-manual "mains/bplus_manualtest.cpp"
+                     ${BUFFER_MANAGER_FILES}
+                     ${SEGMENT_MANAGER_FILES}
+                     ${PROTO_SRCS} ${PROTO_HDRS}
+)
+target_link_libraries(pblus-manual ${PROTOBUF_LIBRARIES})

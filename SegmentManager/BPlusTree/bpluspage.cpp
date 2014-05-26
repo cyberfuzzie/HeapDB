@@ -4,6 +4,7 @@
 #include <cassert>
 
 #include "bpluspage.h"
+#include "notfoundexception.h"
 
 template<typename K, typename V>
 BPlusPage<K,V>::BPlusPage(void* data, uint32_t pageSize,
@@ -20,17 +21,16 @@ BPlusPage<K,V>::BPlusPage(void* data, uint32_t pageSize,
 template<typename K, typename V>
 void BPlusPage<K,V>::takeUpperFrom(BPlusPage<K,V>& source){
 
-    //TODO: handle upper when copying
-
     uint16_t taking = source.header->count / 2;
 
     //copy keys from source
-    memcpy(firstKey, source.firstKey + (source.header->count - taking), taking);
+    memcpy(firstKey, source.firstKey + (source.header->count - taking), taking * sizeof(K));
 
     //copy values from source
-    memcpy(firstValue - taking + 1, source.firstValue - source.header->count + 1, taking);
+    memcpy(firstValue - taking + 1, source.firstValue - source.header->count + 1, taking * sizeof(V));
 
-    source.header->count -= taking;
+    source.header->count = source.header->count - taking;
+    header->count = taking;
 }
 
 template<typename K, typename V>
@@ -63,6 +63,12 @@ K& BPlusPage<K,V>::getHighestKey()
     return *(firstKey + header->count - 1);
 }
 
+template<typename K, typename V>
+V BPlusPage<K,V>::getValueOfHighestKey() const
+{
+    return getValue(header->count - 1);
+}
+
 
 template<typename K, typename V>
 V BPlusPage<K,V>::lookup(const K &key) const
@@ -73,13 +79,12 @@ V BPlusPage<K,V>::lookup(const K &key) const
     if (key == foundKey){
         return getValue(position);
     }else{
-        //TODO: error
-        throw 0;
+        throw NotFoundException();
     }
 }
 
 template<typename K, typename V>
-V BPlusPage<K,V>::lookupSmallestGreaterThan(const K &key) const{
+LookupResult<K,V> BPlusPage<K,V>::lookupSmallestGreaterThan(const K &key) const{
     auto position = getPositionFor(key);
     auto keyAtPos = getKey(position);
 
@@ -92,7 +97,7 @@ V BPlusPage<K,V>::lookupSmallestGreaterThan(const K &key) const{
     }
 
     if (position < header->count){
-        return getValue(position);
+        return LookupResult<K,V>(getKey(position), getValue(position));
     }else{
         throw NotFoundException();
     }
@@ -101,7 +106,6 @@ V BPlusPage<K,V>::lookupSmallestGreaterThan(const K &key) const{
 template<typename K, typename V>
 uint32_t BPlusPage<K,V>::getPositionFor(const K& key) const{
     if (header->count == 0){
-        //TODO: proper error
         return 0;
     }
 
@@ -115,7 +119,11 @@ uint32_t BPlusPage<K,V>::getPositionFor(const K& key) const{
         if (key == foundKey){
             break;
         }else if (cmp(key, foundKey)){
-            upperBound = element - 1;
+            if (element > 0){
+                upperBound = element - 1;
+            }else{
+                upperBound = 0;
+            }
         }else{
             lowerBound = element + 1;
         }
@@ -138,10 +146,10 @@ V& BPlusPage<K,V>::getValue(uint32_t number) const{
 
 template<typename K, typename V>
 bool BPlusPage<K,V>::hasAdditionalSpace() const{
-    return  pageSize
-            - sizeof(BPlusHeader)
-            - (header->count + 1) * sizeof(K)
-            - (header->count + 2) * sizeof(V) > 0;
+    uint32_t neededSpace =  sizeof(BPlusHeader)
+                           + (header->count + 1) * sizeof(K)
+                           + (header->count + 2) * sizeof(V);
+    return  neededSpace <= pageSize;
 }
 
 template<typename K, typename V>
