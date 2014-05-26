@@ -1,15 +1,17 @@
 project(HeapDB)
 cmake_minimum_required(VERSION 2.8)
+
 include(FindProtobuf)
 
 set(CMAKE_CXX_FLAGS "-std=c++11 -O0 -pthread -W -Wall -Wextra")
 
-set(PROTOBUF_PROTOC_EXECUTABLE "/usr/local/bin/protoc")
+set(PROTOBUF_PROTOC_EXECUTABLE "/usr/bin/protoc")
+
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 find_package(Protobuf REQUIRED)
 include_directories(${PROTOBUF_INCLUDE_DIRS})
 
-include_directories(${CMAKE_CURRENT_BINARY_DIR})
 PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS "SegmentManager/schema.proto")
 
 include_directories("gtest"

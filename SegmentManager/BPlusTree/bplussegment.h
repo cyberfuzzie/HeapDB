@@ -8,25 +8,27 @@
 #include "bpluspage.h"
 #include "notfoundexception.h"
 
-template<typename T>
+#include <ostream>
+
+template<typename K, typename V>
 class BPlus_iterator
          :public std::iterator<std::input_iterator_tag,
-                               T, ptrdiff_t, const T*, const T&>
+                               V, ptrdiff_t, const V*, const V&>
 {
-public:
-        const T& operator*() const;
-        const T* operator->() const;
+    public:
+        BPlus_iterator(BufferManager& bm, uint64_t segID, PageID pageID, uint64_t offset);
+        BPlus_iterator(const BPlus_iterator& other);
+        const V& operator*() const;
         BPlus_iterator& operator++();
         BPlus_iterator operator++(int);
-        bool equal(BPlus_iterator const& rhs) const;
-
+        bool operator==(const BPlus_iterator& rhs) const;
+        bool operator!=(const BPlus_iterator& rhs) const;
+    private:
+        BufferManager& bm;
+        uint64_t segID;
+        PageID pageID;
+        uint64_t offset;
 };
-
-template<typename T>
-inline bool operator==(BPlus_iterator<T> const& lhs,BPlus_iterator<T> const& rhs)
-{
-    return lhs.equal(rhs);
-}
 
 template<typename K>
 struct SplitResult{
@@ -65,8 +67,8 @@ public:
     void erase(const K& key);
     V lookup(const K& key) const;
     V findGreatestKey(BufferFrame* startFrame) const;
-    BPlus_iterator<V> lookupRange(const K& startKey) const;
-    char* visualize();
+    BPlus_iterator<K, V> lookupRange(const K& startKey) const;
+    void visualize(ostream &output) const;
 
 private:
     bool (*cmp)(const K&,const K&);
@@ -98,6 +100,8 @@ private:
     void insertAndSplit(const K& key, const V& value);
     void initialize();
     SplitResult<K> splitPage(BufferFrame& frame, const bool inner);
+
+    void visualizePage(ostream &output, const PageID pageID, vector<PageID>& pageLinks) const;
 };
 
 #include "bplussegment.cpp"

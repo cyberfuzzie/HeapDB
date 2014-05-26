@@ -1,6 +1,7 @@
 #include "gtest.h"
 #include "bplussegment.h"
 #include <cstdint>
+#include <fstream>
 using namespace std;
 
 TEST(BPlusTree, OnePageReadWrite) {
@@ -41,3 +42,21 @@ TEST(BPlusTree, MultiPageReadWrite) {
     }
 
 }
+
+TEST(BPlusTree, VisualizeOutput) {
+
+    BufferManager bm(100);
+    SchemaManager scm;
+    BPlusSegment<uint64_t, uint64_t> testTree([](const uint64_t& a,const uint64_t& b){return a < b;},
+        bm, scm, 88, 0, PAGESIZE, 0);
+
+    for (uint64_t i = 1; i < 1000; i += 2){
+        testTree.insert(i, i * 2);
+    }
+
+    filebuf fb;
+    fb.open("VisualizeOutput.dot", std::ios::out);
+    ostream outFile(&fb);
+    testTree.visualize(outFile);
+}
+

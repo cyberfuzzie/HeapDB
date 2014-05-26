@@ -2,8 +2,11 @@
 #define BPLUSPAGE_H
 
 #include <cstdint>
+#include <ostream>
+#include <vector>
 #include "bplusheader.h"
 #include "notfoundexception.h"
+#include "segment.h"
 
 template<typename K, typename V>
 struct LookupResult{
@@ -38,6 +41,9 @@ public:
     void setUpper(V& value);
     K & getHighestKey();
     V getValueOfHighestKey() const;
+    V& getValue(uint32_t number) const;
+    uint32_t getPositionFor(const K& key) const;
+    void visualizePage(std::ostream& output, std::vector<PageID>& pageLinks) const;
 
 private:
     union{
@@ -49,9 +55,8 @@ private:
     V* firstValue;
     bool (*cmp)(const K&, const K&);
     K& getKey(uint32_t number) const;
-    V& getValue(uint32_t number) const;
 
-    uint32_t getPositionFor(const K& key) const;
+
 };
 
 #include "bpluspage.cpp"

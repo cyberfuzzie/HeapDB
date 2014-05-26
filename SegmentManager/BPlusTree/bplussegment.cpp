@@ -4,6 +4,63 @@
 #include "bplussegment.h"
 
 #include <iostream>
+#include <set>
+
+template<typename K, typename V>
+BPlus_iterator<K, V>::BPlus_iterator(BufferManager &bm, uint64_t segID, PageID pageID, uint64_t offset)
+    : bm(bm),
+      segID(segID),
+      pageID(pageID),
+      offset(offset) {}
+
+template<typename K, typename V>
+BPlus_iterator<K, V>::BPlus_iterator(const BPlus_iterator& other)
+    : bm(other.bm),
+      segID(other.segID),
+      pageID(other.pageID),
+      offset(other.offset) {}
+
+template<typename K, typename V>
+const V& BPlus_iterator<K, V>::operator*() const {
+    if (pageID == 0) {
+        throw NotFoundException();
+    }
+    BufferFrame& frame = bm.fixPage(segID, pageID, false);
+    BPlusPage<K, PageID> page(frame.getData(), PAGESIZE, nullptr);
+    V retVal = page.getValue(offset);
+    bm.unfixPage(frame, false);
+    return retVal;
+}
+
+template<typename K, typename V>
+BPlus_iterator<K, V>& BPlus_iterator<K, V>::operator++() {
+    offset++;
+    BufferFrame& frame = bm.fixPage(segID, pageID, false);
+    BPlusPage<K, PageID> page(frame.getData(), PAGESIZE, nullptr);
+    if (offset >= page.header->count) {
+        pageID = page.header->next;
+        offset = 0;
+    }
+    bm.unfixPage(frame, false);
+    return *this;
+}
+
+template<typename K, typename V>
+BPlus_iterator<K, V> BPlus_iterator<K, V>::operator++(int) {
+    BPlus_iterator tmp(*this);
+    operator ++();
+    return tmp;
+}
+
+template<typename K, typename V>
+bool BPlus_iterator<K, V>::operator==(const BPlus_iterator& rhs) const {
+    return pageID == rhs.pageID && offset == rhs.offset;
+}
+
+template<typename K, typename V>
+bool BPlus_iterator<K, V>::operator!=(const BPlus_iterator& rhs) const {
+    return pageID != rhs.pageID || offset != rhs.offset;
+}
 
 template<typename K, typename V>
 BPlusSegment<K,V>::BPlusSegment(bool (*comparator)(const K&, const K&),
@@ -50,8 +107,11 @@ void BPlusSegment<K,V>::insert(const K &key, const V &value)
 
 
 template<typename K, typename V>
-void BPlusSegment<K,V>::erase(const K &key)
-{
+void BPlusSegment<K,V>::erase(const K &key) {
+    BufferFrame& targetFrame = *fixLeafFor(key, true);
+    BPlusPage<K,V> bpp(targetFrame.getData(), pageSize, cmp);
+    bool removed = bpp.remove(key);
+    bm.unfixPage(targetFrame, removed);
 }
 
 template<typename K, typename V>
@@ -343,13 +403,60 @@ bool BPlusSegment<K,V>::isLeaf(const void* data) const{
 }
 
 template<typename K, typename V>
-BPlus_iterator<V> BPlusSegment<K,V>::lookupRange(const K &startKey) const
-{
+BPlus_iterator<K, V> BPlusSegment<K,V>::lookupRange(const K &startKey) const {
+    //TODO: manage NotFoundException
+    BufferFrame& targetFrame = *fixLeafFor(startKey, false);
+    BPlusPage<K, PageID> page(targetFrame.getData(), pageSize, cmp);
+    uint64_t targetOffset = page.getPositionFor(startKey);
+    PageID targetPageID = targetFrame.getMappedPageId();
+    bm.unfixPage(targetFrame, false);
+
+    return BPlus_iterator<K,V>(bm, segmentId, targetPageID, targetOffset);
 }
 
 template<typename K, typename V>
-char *BPlusSegment<K,V>::visualize()
-{
+void BPlusSegment<K, V>::visualize(std::ostream& output) const {
+    output << "digraph exportedBTree {" << endl;
+    uint64_t curPageCount = this->pageCount;
+    vector<vector<PageID>> links(curPageCount);
+    vector<PageID> pages;
+    pages.reserve(curPageCount);
+    pages.push_back(this->root);
+    // output all the pages, collecting links
+    for (int i=0; i<curPageCount; i++) {
+        visualizePage(output, pages[i], links[i]);
+        for (auto it = links[i].begin(); it != links[i].end(); ++it) {
+            auto it2 = pages.begin();
+            while (it2 != pages.end() && *it2 != *it) {
+                it2++;
+            }
+            if (it2 == pages.end()) {
+                pages.push_back(*it);
+            }
+        }
+    }
+    // output links
+    for (int i=0; i<pages.size(); i++) {
+        PageID pageIDFrom = pages[i];
+        if (links[i].size() > 1) {
+            for (int k=0; k<(links[i].size()-1); k++) {
+                output << "node" << pageIDFrom << ":ptr" << k << " -> node" << links[i][k] << ":count" << endl;
+            }
+        } else if (links[i].size() == 1) {
+            output << "node" << pageIDFrom << ":next" << " -> node" << links[i][0] << ":count" << endl;
+        }
+    }
+    output << "}" << endl;
+}
+
+template<typename K, typename V>
+void BPlusSegment<K, V>::visualizePage(ostream& output, const PageID pageID, vector<PageID> &pageLinks) const {
+    BufferFrame& frame = bm.fixPage(segmentId, pageID, false);
+    BPlusPage<K, PageID> page(frame.getData(), pageSize, cmp);
+    output << "node" << pageID << " [shape=record, label= \"";
+    page.visualizePage(output, pageLinks);
+    output << "\"];" << endl;
+    bm.unfixPage(frame, false);
 }
 
 template<typename K, typename V>

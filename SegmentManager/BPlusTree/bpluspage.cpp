@@ -201,8 +201,23 @@ void BPlusPage<K,V>::update(const K &oldKey, const K &newKey)
 }
 
 template<typename K, typename V>
-bool BPlusPage<K,V>::remove(const K &key)
-{
+bool BPlusPage<K,V>::remove(const K &key) {
+    auto position = getPositionFor(key);
+    if (getKey(position) != key) {
+        return false;
+    }
+
+    header->count--;
+    if (position < header->count) {
+        //move keys while overwriting removed key
+        memmove(firstKey + position, firstKey + position + 1, (header->count - position) * sizeof(K));
+
+        //move values while overwriting removed value
+        memmove(firstValue - header->count + 1,
+                firstValue - header->count,
+                (header->count - position) * sizeof(V));
+    }
+    return true;
 }
 
 template<typename K, typename V>
@@ -214,6 +229,31 @@ template<typename K, typename V>
 void BPlusPage<K, V>::setLeaf(const bool isLeaf)
 {
     header->leaf = isLeaf;
+}
+
+template<typename K, typename V>
+void BPlusPage<K, V>::visualizePage(std::ostream &output, std::vector<PageID> &pageLinks) const {
+    if (!(header->isLeaf())) {
+        pageLinks.resize(header->count + 1);
+    }
+    output << "<count> " << header->count << " | <isLeaf> " << (header->isLeaf()?"true":"false");
+    for (int i=0; i<header->count; i++) {
+        output << " | <key" << i << "> " << *(firstKey + i);
+    }
+    for (int i=0; i<header->count; i++) {
+        output << " | <ptr" << i << "> " << *(firstValue - i);
+        if (!(header->isLeaf())) {
+            pageLinks[i] = *(firstValue - i);
+        }
+    }
+    if (header->isLeaf()) {
+        pageLinks.resize(1);
+        output << " | <next>";
+        pageLinks[header->count] = header->next;
+        if (header->next > 0) {
+            output << " *";
+        }
+    }
 }
 
 #endif
