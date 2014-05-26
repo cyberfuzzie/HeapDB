@@ -18,6 +18,53 @@ BPlusPage<K,V>::BPlusPage(void* data, uint32_t pageSize,
 }
 
 template<typename K, typename V>
+void BPlusPage<K,V>::takeUpperFrom(BPlusPage<K,V>& source){
+
+    //TODO: handle upper when copying
+
+    uint16_t taking = source.header->count / 2;
+
+    //copy keys from source
+    memcpy(firstKey, source.firstKey + (source.header->count - taking), taking);
+
+    //copy values from source
+    memcpy(firstValue - taking + 1, source.firstValue - source.header->count + 1, taking);
+
+    source.header->count -= taking;
+}
+
+template<typename K, typename V>
+K BPlusPage<K,V>::getUpper() const
+{
+    return *(firstValue + 1);
+}
+
+template<typename K, typename V>
+bool BPlusPage<K,V>::getUpperExists() const{
+    return header->upperExists;
+}
+
+template<typename K, typename V>
+void BPlusPage<K,V>::setUpperNotExists()
+{
+    header->upperExists = false;
+}
+
+template<typename K, typename V>
+void BPlusPage<K,V>::setUpper(V &value)
+{
+    header->upperExists = true;
+    *(firstValue + 1) = value;
+}
+
+template<typename K, typename V>
+K& BPlusPage<K,V>::getHighestKey()
+{
+    return *(firstKey + header->count - 1);
+}
+
+
+template<typename K, typename V>
 V BPlusPage<K,V>::lookup(const K &key) const
 {
     auto position = getPositionFor(key);
@@ -29,7 +76,26 @@ V BPlusPage<K,V>::lookup(const K &key) const
         //TODO: error
         throw 0;
     }
+}
 
+template<typename K, typename V>
+V BPlusPage<K,V>::lookupSmallestGreaterThan(const K &key) const{
+    auto position = getPositionFor(key);
+    auto keyAtPos = getKey(position);
+
+    if (cmp(keyAtPos, key)){
+        //In case the position search ended at a position where
+        //the stored key is "smaller" than the key to insert, move to the right
+        position++;
+        K& foundKey = getKey(position);
+        assert(header->count == position || !cmp(foundKey, key));
+    }
+
+    if (position < header->count){
+        return getValue(position);
+    }else{
+        throw NotFoundException();
+    }
 }
 
 template<typename K, typename V>
@@ -108,6 +174,22 @@ bool BPlusPage<K,V>::insert(const K &key, const V &value)
     header->count++;
 
     return true;
+}
+template<typename K, typename V>
+void BPlusPage<K,V>::update(const K &oldKey, const K &newKey)
+{
+    uint32_t position = getPositionFor(oldKey);
+    assert(*(firstKey + position) == oldKey);
+
+    *(firstKey + position) = newKey;
+
+    if (0 < position){
+        assert(cmp(*(firstKey + position - 1), newKey));
+    }
+    if (position < header->count - 1){
+        assert(cmp(newKey, *(firstKey + position + 1)));
+    }
+
 }
 
 template<typename K, typename V>

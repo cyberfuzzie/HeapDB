@@ -3,7 +3,7 @@
 #include <cstdint>
 using namespace std;
 
-TEST(BPlusTree, SimpleReadWrite) {
+TEST(BPlusTree, OnePageReadWrite) {
 
     BufferManager bm(100);
     SchemaManager scm;
@@ -21,4 +21,14 @@ TEST(BPlusTree, SimpleReadWrite) {
     for (uint64_t i = 1; i <= 10; i++){
         ASSERT_EQ(i * 2, testTree.lookup(i));
     }
+}
+
+TEST(BPlusTree, MultiPageReadWrite) {
+
+    BufferManager bm(100);
+    SchemaManager scm;
+    int pagesize = sizeof(BPlusHeader) + 5 * sizeof(uint64_t);
+    BPlusSegment<uint64_t, uint64_t> testTree([](const uint64_t& a,const uint64_t& b){return a < b;},
+    bm, scm, 88, 0, pagesize, 0);
+
 }

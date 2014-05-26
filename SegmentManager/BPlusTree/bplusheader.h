@@ -4,7 +4,11 @@
 class BPlusHeader {
 public:
     bool leaf;
+    bool upperExists;
     uint64_t lsn;
+    /**
+     * @brief count The number of keys and values on the page. (Upper is not included in count)
+     */
     uint16_t count;
     /*
      *upper is not in here in order to keep header
@@ -18,6 +22,7 @@ public:
 
     void initialize() {
         leaf = true;
+        upperExists = false;
         count = 0;
     }
 };
