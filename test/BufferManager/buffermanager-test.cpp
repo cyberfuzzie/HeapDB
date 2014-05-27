@@ -6,12 +6,14 @@
 
 #include "gtest.h"
 
+#define PAGESIZE 2048
+
 using namespace std;
 
 TEST(BufferManager, simpleReadWrite) {
 
     //TODO: transform this into a real test
-    BufferManager mgr(16);
+    BufferManager mgr(PAGESIZE, 16);
     BufferFrame& frm1 = mgr.fixPage(1, false);
     cout << "Got BufferFrame at " << &frm1 << endl;
     cout << "BufferFrame has pointer " << frm1.getData() << endl;

@@ -10,6 +10,8 @@
 
 #include "gtest.h"
 
+#define PAGESIZE 2048
+
 using namespace std;
 
 BufferManager* bm;
@@ -78,7 +80,7 @@ TEST(BufferManager, ProvidedTest) {
    for (unsigned i=0; i<threadCount; i++)
       threadSeed[i] = i*97134;
 
-   bm = new BufferManager(pagesInRAM);
+   bm = new BufferManager(PAGESIZE, pagesInRAM);
 
    pthread_t threads[threadCount];
    pthread_attr_t pattr;
@@ -114,7 +116,7 @@ TEST(BufferManager, ProvidedTest) {
 
    // restart buffer manager
    delete bm;
-   bm = new BufferManager(pagesInRAM);
+   bm = new BufferManager(PAGESIZE, pagesInRAM);
 
    // check counter
    unsigned totalCountOnDisk = 0;

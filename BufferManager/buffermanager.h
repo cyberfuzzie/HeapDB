@@ -15,13 +15,16 @@ using namespace std;
 
 class BufferManager {
     public:
-        BufferManager(uint64_t size);
+        BufferManager(uint64_t pageSize, uint64_t onlineFrameCount);
         virtual ~BufferManager();
         BufferFrame& fixPage(uint64_t pageId, bool exclusive);
         BufferFrame& fixPage(uint64_t segmentId, uint64_t pageId, bool exclusive);
         void unfixPage(BufferFrame& frame, bool isDirty);
+        uint64_t getPageSize() const;
+
     private:
         unique_ptr<BufferFrame[]> frames;
+        uint64_t pageSize;
         BufferManagerHashTable mappedPages;
         vector<uint64_t> freeFrames;
         mutex freeFramesMutex;

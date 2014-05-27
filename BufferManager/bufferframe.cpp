@@ -70,7 +70,7 @@ uint64_t BufferFrame::getMappedPageId() {
     return this->pageId;
 }
 
-void BufferFrame::mapPage(uint64_t pageId) {
+void BufferFrame::mapPage(uint64_t pageId, uint64_t pageSize) {
     atomic_thread_fence(memory_order_seq_cst);
     if (!this->writePossible) {
         //TODO: throw error
@@ -83,22 +83,22 @@ void BufferFrame::mapPage(uint64_t pageId) {
     int fd = open (filename, O_RDONLY);
     struct stat fileInfo;
     fstat(fd, &fileInfo);
-    this->data = unique_ptr<char[]>(new char[PAGESIZE]);
-    memset (this->data.get(), 0, PAGESIZE);
+    this->data = unique_ptr<char[]>(new char[pageSize]);
+    memset (this->data.get(), 0, pageSize);
     if (fd >= 0) {
         // no error, read
-        off_t readExpected = fileInfo.st_size - PAGESIZE * extractActualPageId(pageId);
-        if (readExpected > PAGESIZE) {
-            readExpected = PAGESIZE;
+        off_t readExpected = fileInfo.st_size - pageSize * extractActualPageId(pageId);
+        if (readExpected > pageSize) {
+            readExpected = pageSize;
         }
-        ssize_t readCount = pread (fd, this->data.get(), PAGESIZE, PAGESIZE * extractActualPageId(pageId));
+        ssize_t readCount = pread (fd, this->data.get(), pageSize, pageSize * extractActualPageId(pageId));
         //TODO: reenable
         //assert(readCount == readExpected);
         close (fd);
     }
 }
 
-void BufferFrame::writePage() {
+void BufferFrame::writePage(uint64_t pageSize) {
     atomic_thread_fence(memory_order_seq_cst);
     if (!this->writePossible || this->data.get() == nullptr) {
         cout << "Writing is not possible for this page" << endl;
@@ -109,9 +109,9 @@ void BufferFrame::writePage() {
     int fd = open (filename, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR);
     if (fd >= 0) {
         // no error, read
-        posix_fallocate(fd, PAGESIZE * extractActualPageId(pageId), PAGESIZE);
-        ssize_t writeCount = pwrite (fd, this->data.get(), PAGESIZE, PAGESIZE * extractActualPageId(pageId));
-        assert(writeCount == PAGESIZE);
+        posix_fallocate(fd, pageSize * extractActualPageId(pageId), pageSize);
+        ssize_t writeCount = pwrite (fd, this->data.get(), pageSize, pageSize * extractActualPageId(pageId));
+        assert(writeCount == pageSize);
         close (fd);
     }
 }

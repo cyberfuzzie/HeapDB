@@ -46,7 +46,7 @@ TID SPSegment::insert(const Record&r, bool exclude, uint64_t pageIdToExclude){
     //In case no page had enough space:
     uint64_t newPageId = getPageCount();
     BufferFrame& bf = bm.fixPage(getSegmentId(), newPageId, true);
-    SlottedPage sp(bf.getData(), PAGESIZE);
+    SlottedPage sp(bf.getData(), bm.getPageSize());
     sp.initialize();
     uint32_t slotNr = sp.insertRecord(r);
     bm.unfixPage(bf, true);
@@ -59,7 +59,7 @@ TID SPSegment::insert(const Record&r, bool exclude, uint64_t pageIdToExclude){
 bool SPSegment::remove(TID tid) {
     //TODO: remove also other tuple when redirected
     BufferFrame& bf = bm.fixPage(segmentId, getPageId(tid), true);
-    SlottedPage sp(bf.getData(), PAGESIZE);
+    SlottedPage sp(bf.getData(), bm.getPageSize());
     bool result = sp.removeRecord(getSlotId(tid));
     bm.unfixPage(bf, true);
     return result;
@@ -69,7 +69,7 @@ Record SPSegment::lookup(TID tid) {
     PageID pageId = getPageId(tid);
     SlotID slotId = getSlotId(tid);
     BufferFrame* bf = &(bm.fixPage(segmentId, pageId, false));
-    SlottedPage sp(bf->getData(), PAGESIZE);
+    SlottedPage sp(bf->getData(), bm.getPageSize());
     Slot s = sp.lookup(slotId);
     if (s.isRedirect()) {
         pageId = getPageId(s.getRedirect());
@@ -78,7 +78,7 @@ Record SPSegment::lookup(TID tid) {
         //Somebody might change the redirect while we follow it
         bm.unfixPage(*bf, false);
         bf = &(bm.fixPage(segmentId, pageId, false));
-        sp = SlottedPage(bf->getData(), PAGESIZE);
+        sp = SlottedPage(bf->getData(), bm.getPageSize());
         s = sp.lookup(slotId);
     }
     assert(s.isRedirect() == false);
@@ -93,7 +93,7 @@ bool SPSegment::update(TID tid, const Record& r) {
     PageID pageId = getPageId(tid);
     SlotID slotId = getSlotId(tid);
     BufferFrame& bf = bm.fixPage(segmentId, pageId, true);
-    SlottedPage sp(bf.getData(), PAGESIZE);
+    SlottedPage sp(bf.getData(), bm.getPageSize());
     Slot s = sp.lookup(slotId);
 
     if (s.isRedirect()) {
@@ -102,7 +102,7 @@ bool SPSegment::update(TID tid, const Record& r) {
         SlotID referredSlotId = getSlotId(referredTID);
         //TO DISCUSS: May cause deadlock
         BufferFrame& referredbf = bm.fixPage(segmentId, referredPageId, true);
-        SlottedPage referredsp(referredbf.getData(), PAGESIZE);
+        SlottedPage referredsp(referredbf.getData(), bm.getPageSize());
 
         if (sp.spaceAvailableForUpdate(slotId, r)) {
             //There is enough space for record on original page

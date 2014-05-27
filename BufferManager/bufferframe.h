@@ -1,8 +1,6 @@
 #ifndef BUFFERFRAME_H
 #define BUFFERFRAME_H
 
-#define PAGESIZE 4096
-
 #include <atomic>
 #include <memory>
 
@@ -25,11 +23,12 @@ class BufferFrame
         bool trywrlock();
         void unlock();
         uint64_t getMappedPageId();
-        void mapPage(uint64_t pageId);
-        void writePage();
+        void mapPage(uint64_t pageId, uint64_t pageSize);
+        void writePage(uint64_t pageSize);
 
         atomic<uint64_t> refCount;
         volatile atomic<bool> writePossible;
+
     protected:
         unique_ptr<char[]> data;
         uint64_t frameId;

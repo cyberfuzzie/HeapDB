@@ -4,9 +4,11 @@
 #include <fstream>
 using namespace std;
 
+#define PAGESIZE 2048
+
 TEST(BPlusTree, OnePageReadWrite) {
 
-    BufferManager bm(100);
+    BufferManager bm(PAGESIZE, 100);
     SchemaManager scm;
     BPlusSegment<uint64_t, uint64_t> testTree([](const uint64_t& a,const uint64_t& b){return a < b;},
         bm, scm, 88, 0, PAGESIZE, 0);
@@ -26,12 +28,12 @@ TEST(BPlusTree, OnePageReadWrite) {
 
 TEST(BPlusTree, MultiPageReadWrite) {
 
-    BufferManager bm(100);
+    BufferManager bm(PAGESIZE, 100);
     SchemaManager scm;
     //creating tree with space for two elements
-    int pagesize = sizeof(BPlusHeader) + 9 * sizeof(uint64_t);
+    //int pagesize = sizeof(BPlusHeader) + 9 * sizeof(uint64_t);
     BPlusSegment<uint64_t, uint64_t> testTree([](const uint64_t& a,const uint64_t& b){return a < b;},
-    bm, scm, 88, 0, pagesize, 0);
+    bm, scm, 88, 0, PAGESIZE, 0);
 
     for (uint64_t i = 1; i < 100; i++){
         testTree.insert(i, i * 2);
@@ -45,12 +47,12 @@ TEST(BPlusTree, MultiPageReadWrite) {
 
 TEST(BPlusTree, VisualizeOutput) {
 
-    BufferManager bm(100);
+    BufferManager bm(PAGESIZE, 100);
     SchemaManager scm;
     BPlusSegment<uint64_t, uint64_t> testTree([](const uint64_t& a,const uint64_t& b){return a < b;},
         bm, scm, 88, 0, PAGESIZE, 0);
 
-    for (uint64_t i = 1; i < 1000; i += 2){
+    for (uint64_t i = 1; i < 100; i += 2){
         testTree.insert(i, i * 2);
     }
 

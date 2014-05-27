@@ -7,8 +7,10 @@
 
 #include "gtest.h"
 
+#define PAGESIZE 2048
+
 TEST(SegmentManager, SimpleWriteRead) {
-    BufferManager bm(100);
+    BufferManager bm(PAGESIZE, 100);
     SchemaManager scm;
     SegmentManager sm(bm, scm);
     try {
