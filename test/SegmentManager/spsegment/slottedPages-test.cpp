@@ -10,6 +10,8 @@
 
 #include "gtest.h"
 
+#define PAGESIZE 2048
+
 using namespace std;
 
 // todo: adapt to your implementation
@@ -50,7 +52,7 @@ TEST(SegmentManager, ProvidedTest) {
    unordered_map<unsigned, unsigned> usage; // pageID -> bytes used within this page
 
    // Setting everything
-   BufferManager bm(100);
+   BufferManager bm(4096, 100);
    SchemaManager scm;
    SegmentManager sm(bm, scm);
    srand(time(NULL));

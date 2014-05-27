@@ -4,13 +4,14 @@
 
 #include <cassert>
 
-BufferManager::BufferManager(uint64_t size)
-    : frames(new BufferFrame[size]),
+BufferManager::BufferManager(uint64_t pageSize, uint64_t onlineFrameCount)
+    : frames(new BufferFrame[onlineFrameCount]),
+      pageSize(pageSize),
       mappedPages(frames.get()),
-      twoq{size}
+      twoq{onlineFrameCount}
 {
-    freeFrames.reserve(size);
-    for (uint64_t i = 0; i < size; i++) {
+    freeFrames.reserve(onlineFrameCount);
+    for (uint64_t i = 0; i < onlineFrameCount; i++) {
         frames[i].setFrameId(i+1);
         freeFrames.push_back(i+1);
     }
@@ -71,7 +72,7 @@ BufferFrame& BufferManager::fixPage(uint64_t pageId, bool exclusive) {
             }
 
 
-            frames[frameId-1].mapPage(pageId);
+            frames[frameId-1].mapPage(pageId, pageSize);
 
             //tell replaceMgr that page with frame is in use
             twoq.promote(&frames[frameId-1]);
@@ -121,11 +122,15 @@ void BufferManager::unfixPage(BufferFrame& frame, bool isDirty) {
 
     // write if modified
     if (isDirty) {
-        frame.writePage();
+        frame.writePage(pageSize);
     }
 
     // unlock and check refCount
     frame.unlock();
     frame.refCount--;
 
+}
+
+uint64_t BufferManager::getPageSize() const {
+    return pageSize;
 }

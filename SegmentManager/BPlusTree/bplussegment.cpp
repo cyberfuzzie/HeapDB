@@ -26,7 +26,7 @@ const V& BPlus_iterator<K, V>::operator*() const {
         throw NotFoundException();
     }
     BufferFrame& frame = bm.fixPage(segID, pageID, false);
-    BPlusPage<K, PageID> page(frame.getData(), PAGESIZE, nullptr);
+    BPlusPage<K, PageID> page(frame.getData(), bm.getPageSize(), nullptr);
     V retVal = page.getValue(offset);
     bm.unfixPage(frame, false);
     return retVal;
@@ -36,7 +36,7 @@ template<typename K, typename V>
 BPlus_iterator<K, V>& BPlus_iterator<K, V>::operator++() {
     offset++;
     BufferFrame& frame = bm.fixPage(segID, pageID, false);
-    BPlusPage<K, PageID> page(frame.getData(), PAGESIZE, nullptr);
+    BPlusPage<K, PageID> page(frame.getData(), bm.getPageSize(), nullptr);
     if (offset >= page.header->count) {
         pageID = page.header->next;
         offset = 0;

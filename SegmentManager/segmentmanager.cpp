@@ -32,7 +32,7 @@ SPSegment SegmentManager::getSegment(const char* relationName) {
         if ( scm.getSchema().relations(i).name().compare(relationName) == 0 ) {
             uint64_t segmentId = scm.getSchema().relations(i).segment().segment_id();
             uint64_t pageCount = scm.getSchema().relations(i).segment().sizeinpages();
-            return SPSegment(scm, bm, segmentId, pageCount, PAGESIZE);
+            return SPSegment(scm, bm, segmentId, pageCount, bm.getPageSize());
         }
     }
     // nothing found
