@@ -120,12 +120,20 @@ uint32_t BPlusPage<K,V>::getPositionFor(const K& key) const{
             break;
         }else if (cmp(key, foundKey)){
             if (element > 0){
-                upperBound = element - 1;
+                if (element == lowerBound){
+                    upperBound = element;
+                }else{
+                    upperBound = element - 1;
+                }
             }else{
                 upperBound = 0;
             }
         }else{
-            lowerBound = element + 1;
+            if (element == upperBound){
+                lowerBound = element;
+            }else{
+                lowerBound = element + 1;
+            }
         }
 
         element = lowerBound + ((upperBound - lowerBound) / 2);
@@ -236,7 +244,7 @@ void BPlusPage<K, V>::visualizePage(std::ostream &output, std::vector<PageID> &p
     if (!(header->isLeaf())) {
         pageLinks.resize(header->count + 1);
     }
-    output << "<count> " << header->count << " | <isLeaf> " << (header->isLeaf()?"true":"false");
+    output << "<count> " << header->count << " | <isLeaf> " << (header->isLeaf()?"leaf":"inner");
     for (int i=0; i<header->count; i++) {
         output << " | <key" << i << "> " << *(firstKey + i);
     }
@@ -245,6 +253,9 @@ void BPlusPage<K, V>::visualizePage(std::ostream &output, std::vector<PageID> &p
         if (!(header->isLeaf())) {
             pageLinks[i] = *(firstValue - i);
         }
+    }
+    if (header->upperExists){
+        pageLinks[header->count] = *(firstValue + 1);
     }
     if (header->isLeaf()) {
         pageLinks.resize(1);

@@ -174,21 +174,35 @@ SplitResult<K> BPlusSegment<K,V>::insertAndSplit(const K& key, const V& value, c
             SplitResult<K> result = splitPage(frame, false);
 
             //insert key
-            BufferFrame* lowerSiblingFrame;
-            bool needsUnfix = false;
             if (cmp(key, result.pageHighestKey)){
-                lowerSiblingFrame = &frame;
+                BPlusPage<K, V> page(frame.getData(), pageSize, cmp);
+                page.insert(key, value);
+
+                //update split result after insert
+                if (!page.getUpperExists()){
+                    result.pageHighestKey = page.getHighestKey();
+                }else{
+                    result.pageHighestKey = findGreatestKey(&frame);
+                }
+
             }else{
-                lowerSiblingFrame = &bm.fixPage(segmentId, result.siblingPageID, true);
-                needsUnfix = true;
+                BufferFrame& frameToInsert = bm.fixPage(segmentId, result.siblingPageID, true);
+
+                BPlusPage<K, V> page(frameToInsert.getData(), pageSize, cmp);
+                page.insert(key, value);
+
+                //update split result after insert
+                if (!page.getUpperExists()){
+                    result.siblingHighestKey = page.getHighestKey();
+                }else{
+                    result.siblingHighestKey = findGreatestKey(&frameToInsert);
+                }
+
+                bm.unfixPage(frameToInsert, true);
             }
 
-            BPlusPage<K, V> page(lowerSiblingFrame->getData(), pageSize, cmp);
-            page.insert(key, value);
 
-            if (needsUnfix){
-                bm.unfixPage(*lowerSiblingFrame, true);
-            }
+            //TODO: update result after insert
 
             return result;
         }
@@ -238,6 +252,8 @@ SplitResult<K> BPlusSegment<K,V>::insertAndSplit(const K& key, const V& value, c
             }else if (!page.getUpperExists()){
                 //there is no space for a key, value pair, but we can put the child in upper
                 page.setUpper(result.siblingPageID);
+
+                page.update(usedKey, result.pageHighestKey);
                 
                 //unfix frame from result
                 bm.unfixPage(result.pageFrame, true);
@@ -251,25 +267,38 @@ SplitResult<K> BPlusSegment<K,V>::insertAndSplit(const K& key, const V& value, c
                     page.update(key, result.pageHighestKey);
                 }
 
+                bm.unfixPage(result.pageFrame, true);
+
                 //split self to make space for sibling
                 SplitResult<K> selfSplit = splitPage(frame, true);
 
                 //insert sibling
-                BufferFrame* lowerSiblingFrame;
-                bool needsUnfix = false;
                 if (cmp(result.siblingHighestKey, selfSplit.pageHighestKey)){
-                    lowerSiblingFrame = &frame;
-                }else{
-                    lowerSiblingFrame = &bm.fixPage(segmentId, selfSplit.siblingPageID, true);
-                    needsUnfix = true;
-                }
-                BPlusPage<K, PageID> putLowerSibling(lowerSiblingFrame->getData(), pageSize, cmp);
-                putLowerSibling.insert(result.siblingHighestKey, result.siblingPageID);
+                    BPlusPage<K, PageID> putLowerSibling(frame.getData(), pageSize, cmp);
+                    putLowerSibling.insert(result.siblingHighestKey, result.siblingPageID);
 
-                if (needsUnfix){
-                    bm.unfixPage(*lowerSiblingFrame, true);
+                    if (!putLowerSibling.getUpperExists()){
+                        selfSplit.pageHighestKey = putLowerSibling.getHighestKey();
+                    }else{
+                        selfSplit.pageHighestKey = findGreatestKey(&frame);
+                    }
+
+                }else{
+                    BufferFrame& lowerSiblingFrame = bm.fixPage(segmentId, selfSplit.siblingPageID, true);
+
+                    BPlusPage<K, PageID> putLowerSibling(lowerSiblingFrame.getData(), pageSize, cmp);
+                    putLowerSibling.insert(result.siblingHighestKey, result.siblingPageID);
+
+                    if (!putLowerSibling.getUpperExists()){
+                        selfSplit.siblingHighestKey = putLowerSibling.getHighestKey();
+                    }else{
+                        selfSplit.siblingHighestKey = findGreatestKey(&lowerSiblingFrame);
+                    }
+
+                    bm.unfixPage(lowerSiblingFrame, true);
                 }
-                bm.unfixPage(result.pageFrame, true);
+
+
                 return selfSplit;
             }
 
@@ -307,7 +336,7 @@ SplitResult<K> BPlusSegment<K,V>::splitPage(BufferFrame &frame, const bool inner
 
         //handle upper key on split
         if (page.getUpperExists()){
-            K newKey = findGreatestKey(&siblingFrame);
+            K newKey = findGreatestKey(&frame);
             sibling.insert(newKey, page.getUpper());
 
             page.setUpperNotExists();

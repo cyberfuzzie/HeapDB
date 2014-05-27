@@ -3,6 +3,7 @@
 
 #include "bplussegment.h"
 #include <cstdint>
+#include <iostream>
 
 using namespace std;
 
@@ -17,14 +18,16 @@ int main()
     BPlusSegment<uint64_t, uint64_t> testTree([](const uint64_t& a,const uint64_t& b){return a < b;},
     bm, scm, 88, 0, pagesize, 0);
 
-    for (uint64_t i = 1; i < 100; i++){
+    for (uint64_t i = 1; i <= 30; i++){
         testTree.insert(i, i * 2 + 100);
     }
 
-    for (uint64_t i = 1; i < 100; i++){
+    testTree.visualize(cout);
+
+    for (uint64_t i = 1; i <= 30; i++){
         assert(i * 2 + 100 == testTree.lookup(i));
     }
 
-    return 1;
+    return 0;
 
 }
