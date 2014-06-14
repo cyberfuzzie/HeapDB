@@ -24,8 +24,10 @@ class Register
 
         uint32_t getHash();
 
-        uint64_t getInteger();
-        void setInteger(uint64_t value);
+        DataType getType();
+
+        int64_t getInteger();
+        void setInteger(int64_t value);
 
         double getDouble();
         void setDouble(double value);
@@ -35,7 +37,7 @@ class Register
 
     private:
         union {
-                uint64_t intData;
+                int64_t intData;
                 double doubleData;
                 string* stringData;
         };

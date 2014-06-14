@@ -27,21 +27,27 @@ bool Register::operator!=(const Register& other) const {
 
 uint32_t Register::getHash() {
     if (dataType == Integer || dataType == Double)
-        return intData & ((1 << 32) - 1);
+        return intData & ((1l << 32) - 1);
 
     // TODO: really bad hash function
     if (dataType == String)
         return 0;
+
+    return 0;
 }
 
-uint64_t Register::getInteger() {
+Register::DataType Register::getType() {
+    return dataType;
+}
+
+int64_t Register::getInteger() {
     if (dataType != Integer)
         throw 0;
 
     return intData;
 }
 
-void Register::setInteger(uint64_t value) {
+void Register::setInteger(int64_t value) {
     cleanupDynamicData();
 
     dataType = Integer;
