@@ -17,22 +17,23 @@ class Register
         };
 
         Register();
+        Register(const Register* other);
 
         bool operator==(const Register& other) const;
         bool operator!=(const Register& other) const;
         // TODO: other operators
 
-        uint32_t getHash();
+        uint32_t getHash() const;
 
-        DataType getType();
+        DataType getType() const;
 
-        int64_t getInteger();
+        int64_t getInteger() const;
         void setInteger(int64_t value);
 
-        double getDouble();
+        double getDouble() const;
         void setDouble(double value);
 
-        const string& getString();
+        const string& getString() const;
         void setString(const string& value);
 
     private:

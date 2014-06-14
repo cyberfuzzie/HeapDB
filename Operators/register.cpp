@@ -2,8 +2,20 @@
 
 Register::Register()
     : intData(0),
-      dataType(Invalid)
-{}
+      dataType(Invalid) {}
+
+Register::Register(const Register *other)
+    : intData(0),
+      dataType(other->dataType)
+{
+    if (dataType == Integer) {
+        intData = other->intData;
+    } else if (dataType == Double) {
+        doubleData = other->doubleData;
+    } else if (dataType == String) {
+        stringData = other->stringData;
+    }
+}
 
 bool Register::operator==(const Register& other) const {
     if (dataType != other.dataType)
@@ -25,7 +37,7 @@ bool Register::operator!=(const Register& other) const {
     return ! (*this == other);
 }
 
-uint32_t Register::getHash() {
+uint32_t Register::getHash() const {
     if (dataType == Integer || dataType == Double)
         return intData & ((1l << 32) - 1);
 
@@ -36,11 +48,11 @@ uint32_t Register::getHash() {
     return 0;
 }
 
-Register::DataType Register::getType() {
+Register::DataType Register::getType() const {
     return dataType;
 }
 
-int64_t Register::getInteger() {
+int64_t Register::getInteger() const {
     if (dataType != Integer)
         throw 0;
 
@@ -54,7 +66,7 @@ void Register::setInteger(int64_t value) {
     intData = value;
 }
 
-double Register::getDouble() {
+double Register::getDouble() const {
     if (dataType != Double)
         throw 0;
 
@@ -68,7 +80,7 @@ void Register::setDouble(double value) {
     doubleData = value;
 }
 
-const string &Register::getString() {
+const string &Register::getString() const {
     if (dataType != String)
         throw 0;
 
