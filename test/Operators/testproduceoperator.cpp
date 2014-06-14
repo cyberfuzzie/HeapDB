@@ -1,6 +1,6 @@
-#include "testoperator.h"
+#include "testproduceoperator.h"
 
-TestOperator::TestOperator()
+TestProduceOperator::TestProduceOperator()
     : tuplePos(-1) {
     std::vector<Register*> t1;
     auto r = new Register();
@@ -38,7 +38,7 @@ TestOperator::TestOperator()
 }
 
 
-TestOperator::~TestOperator() {
+TestProduceOperator::~TestProduceOperator() {
     for (auto it = tuples.begin(); it != tuples.end(); it++) {
         for (auto it2 = it->begin(); it2 != it->end(); it2++) {
             delete *it2;
@@ -46,20 +46,20 @@ TestOperator::~TestOperator() {
     }
 }
 
-void TestOperator::open() {}
+void TestProduceOperator::open() {}
 
-bool TestOperator::next() {
+bool TestProduceOperator::next() {
     if (tuplePos >= static_cast<int64_t>(tuples.size()))
         return false;
 
     return ++tuplePos < static_cast<int64_t>(tuples.size());
 }
 
-vector<Register*> TestOperator::getOutput() const {
+vector<Register*> TestProduceOperator::getOutput() const {
     if (tuplePos < 0 || tuplePos >= static_cast<int64_t>(tuples.size()))
         throw 0;
 
     return tuples[tuplePos];
 }
 
-void TestOperator::close() {}
+void TestProduceOperator::close() {}

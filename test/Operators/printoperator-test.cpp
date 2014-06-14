@@ -2,15 +2,15 @@
 #include "gtest.h"
 
 #include "printoperator.h"
-#include "testoperator.h"
+#include "testproduceoperator.h"
 
 #include <iostream>
 
 using namespace std;
 
 TEST(Operators, PrintOperatorOK) {
-    TestOperator testOp;
-    PrintOperator printOp(testOp, cout);
+    TestProduceOperator sourceOp;
+    PrintOperator printOp(sourceOp, cout);
 
     cout << "Printing output..." << endl;
 

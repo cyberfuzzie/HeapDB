@@ -5,18 +5,18 @@
 
 #include <vector>
 
-class TestOperator : public Operator {
+class TestProduceOperator : public Operator {
     public:
-        TestOperator();
+        TestProduceOperator();
         /**
-         * @brief ~TestOperator
-         * Destructor for object of type TestOperator
+         * @brief ~TestProduceOperator
+         * Destructor for object of type TestProduceOperator
          */
-        virtual ~TestOperator();
+        virtual ~TestProduceOperator();
 
         /**
          * @brief open
-         * Open the Operator
+         * Open the TestProduceOperator
          */
         virtual void open();
 
@@ -38,7 +38,7 @@ class TestOperator : public Operator {
 
         /**
          * @brief close
-         * Close the TestOperator
+         * Close the TestProduceOperator
          */
         virtual void close();
 
