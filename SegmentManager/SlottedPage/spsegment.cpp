@@ -155,6 +155,12 @@ bool SPSegment::update(TID tid, const Record& r) {
     }
 }
 
+unique_ptr<SPRecord_iterator> SPSegment::getRecordIterator()
+{
+    unique_ptr<SPRecord_iterator> p(new SPRecord_iterator(bm, *this));
+    return move(p);
+}
+
 inline PageID SPSegment::getPageId(TID tid) const {
     return (tid >> 24);
 }
@@ -166,3 +172,66 @@ inline SlotID SPSegment::getSlotId(TID tid) const{
 inline TID SPSegment::makeTID(uint64_t pageID, uint64_t slotNr) {
     return ((pageID << 24) | (slotNr & 0xffffff));
 }
+
+
+SPRecord_iterator::SPRecord_iterator(BufferManager &bm, SPSegment& seg)
+    :
+      bm(bm),
+      source(seg)
+{
+    currentPageNr = 0;
+    currentSlotNr = 0;
+
+    currentFrame = &(bm.fixPage(source.getSegmentId(), currentPageNr, false));
+    currentPage = new SlottedPage(currentFrame->getData(), bm.getPageSize());
+
+}
+
+SPRecord_iterator::~SPRecord_iterator()
+{
+    delete currentPage;
+    bm.unfixPage(*currentFrame, false);
+}
+
+const Record SPRecord_iterator::operator *() const
+{
+    return currentPage->readRecord(currentPage->lookup(currentSlotNr));
+}
+
+bool SPRecord_iterator::operator==(const SPRecord_iterator& rhs) const{
+    return rhs.currentPageNr == currentPageNr && rhs.currentSlotNr == currentSlotNr;
+}
+
+bool SPRecord_iterator::operator!=(const SPRecord_iterator& rhs) const{
+    return rhs.currentPageNr != currentPageNr;
+}
+
+unique_ptr<SPRecord_iterator> SPRecord_iterator::end()
+{
+    unique_ptr<SPRecord_iterator> i(new SPRecord_iterator(*this));
+    i->currentPageNr = source.getPageCount();
+    return move(i);
+}
+
+SPRecord_iterator &SPRecord_iterator::operator ++()
+{
+    currentSlotNr++;
+    while (currentPage->getHeader().slotCount <= currentSlotNr
+           || currentPage->lookup(currentSlotNr).isRedirect()){
+
+        currentPageNr++;
+        if (currentPageNr < source.getPageCount()){
+            //move to next page
+            delete currentPage;
+            bm.unfixPage(*currentFrame, false);
+
+            currentFrame = &(bm.fixPage(source.getSegmentId(), currentPageNr, false));
+
+            currentPage = new SlottedPage(currentFrame->getData(), bm.getPageSize());
+            currentSlotNr = 0;
+        }
+    }
+}
+
+
+

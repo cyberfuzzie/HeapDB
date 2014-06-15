@@ -5,6 +5,7 @@
 
 // Forward declarations
 class SPSegment;
+class SPRecord_iterator;
 
 #include "record.h"
 #include "tid.h"
@@ -16,6 +17,31 @@ class SPSegment;
 
 
 typedef uint64_t SlotID;
+
+class SPRecord_iterator
+         :public std::iterator<std::input_iterator_tag,
+                               Record, ptrdiff_t, const Record*, const Record&>
+{
+    public:
+        SPRecord_iterator(BufferManager& bm, SPSegment& seg);
+        virtual ~SPRecord_iterator();
+        const Record operator*() const;
+        //TODO:
+        //TID getCurrentTID() const;
+        SPRecord_iterator& operator++();
+        SPRecord_iterator operator++(int);
+        bool operator==(const SPRecord_iterator& rhs) const;
+        bool operator!=(const SPRecord_iterator& rhs) const;
+        unique_ptr<SPRecord_iterator> end();
+    private:
+        BufferManager& bm;
+        SPSegment& source;
+        BufferFrame* currentFrame;
+        SlottedPage* currentPage;
+
+        uint64_t currentPageNr;
+        uint64_t currentSlotNr;
+};
 
 
 class SPSegment :public Segment {
@@ -33,6 +59,9 @@ class SPSegment :public Segment {
         bool remove(TID tid);
         Record lookup(TID tid);
         bool update(TID tid, const Record& r);
+
+        unique_ptr<SPRecord_iterator> getRecordIterator();
+
 
     private:
         BufferManager& bm;
