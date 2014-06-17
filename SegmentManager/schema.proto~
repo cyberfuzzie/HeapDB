@@ -18,11 +18,13 @@ message Attribute {
         optional string string = 2;
     }
 
+    message TypeWithArguments {
+        required Type type = 1;
+        repeated Argument arguments = 2;
+    }
+
     required string name = 1;
-
-    required Type type = 2;
-    repeated Argument arguments = 3;
-
+    required TypeWithArguments type = 2;
 }
 
 message Segment {

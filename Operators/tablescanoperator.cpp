@@ -46,9 +46,9 @@ void TableScanOperator::initAttributeOffsets() {
     int count = 0;
     for (int i=0; i<relation.attributes_size(); i++) {
         const schema::Attribute& attr = relation.attributes(i);
-        if (attr.type(0).type() == attr.Numeric
-                || attr.type(0).type() == attr.Decimal
-                || attr.type(0).type() == attr.Varchar) {
+        if (attr.type() == attr.Numeric
+                || attr.type() == attr.Decimal
+                || attr.type() == attr.Varchar) {
             attributeOffsets[count] = count;
             count++;
         } else {
@@ -68,11 +68,11 @@ void TableScanOperator::loadRegister(int attrPos, Register* reg) {
     const schema::Attribute& attr = relation.attributes(attrPos);
     off_t offset = attributeOffsets[attrPos];
     const char* data = (**recordIterator).getData();
-    if (attr.type(0).type() == attr.Numeric) {
+    if (attr.type() == attr.Numeric) {
         reg->setInteger(*reinterpret_cast<const uint64_t*>(data + offset));
-    } else if (attr.type(0).type() == attr.Decimal) {
+    } else if (attr.type() == attr.Decimal) {
         reg->setDouble(*reinterpret_cast<const double*>(data + offset));
-    } else if (attr.type(0).type() == attr.Varchar) {
+    } else if (attr.type() == attr.Varchar) {
         uint64_t strData = *reinterpret_cast<const uint64_t*>(data + offset);
         uint32_t strLen = strData & 0xffffffff;
         uint32_t strOff = strData >> 32;
