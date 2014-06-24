@@ -1,3 +1,7 @@
+#include <cstring>
+#include <memory>
+#include <stack>
+
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -13,6 +17,7 @@
 #include "calcnode.h"
 
 using namespace llvm;
+using namespace std;
 
 Value* ProcessNode(LLVMContext& Context, Function* func, BasicBlock *block, Type* dataType, Type* argType, const CalcNode& node) {
     Value* result;
@@ -59,14 +64,63 @@ static Function *CreateCalcFunction(Module *M, LLVMContext &Context, Type* dataT
     return CalcF;
 }
 
+CalcNode* createTree(char* input) {
+    char* tok = strtok(input, " ");
+    stack<CalcNode*> nodeStack;
+    CalcNode* rhs;
+    CalcNode* lhs;
+    while (tok != nullptr) {
+        switch (tok[0]) {
+            case '+':
+                rhs = nodeStack.top();
+                nodeStack.pop();
+                lhs = nodeStack.top();
+                nodeStack.pop();
+                nodeStack.push(new CalcNode(CalcNode::CalcOperator::add, lhs, rhs));
+                break;
+            case '-':
+                rhs = nodeStack.top();
+                nodeStack.pop();
+                lhs = nodeStack.top();
+                nodeStack.pop();
+                nodeStack.push(new CalcNode(CalcNode::CalcOperator::subtract, lhs, rhs));
+                break;
+            case '*':
+                rhs = nodeStack.top();
+                nodeStack.pop();
+                lhs = nodeStack.top();
+                nodeStack.pop();
+                nodeStack.push(new CalcNode(CalcNode::CalcOperator::multiply, lhs, rhs));
+                break;
+            case '/':
+                rhs = nodeStack.top();
+                nodeStack.pop();
+                lhs = nodeStack.top();
+                nodeStack.pop();
+                nodeStack.push(new CalcNode(CalcNode::CalcOperator::divide, lhs, rhs));
+                break;
+            default:
+                int var = atoi(tok);
+                nodeStack.push(new CalcNode(var));
+        }
+
+        tok = strtok(nullptr, " ");
+    }
+    return nodeStack.top();
+}
+
+void printHelp() {
+
+}
+
 int main(int argc, char **argv) {
-    CalcNode v0(0);
-    CalcNode v1(1);
-    CalcNode v2(2);
-    CalcNode v3(3);
-    CalcNode add(CalcNode::CalcOperator::add, &v0, &v1);
-    CalcNode sub(CalcNode::CalcOperator::subtract, &v2, &v3);
-    CalcNode mul(CalcNode::CalcOperator::multiply, &add, &sub);
+
+    if (argc < 3) {
+        printHelp();
+        return 1;
+    }
+
+    std::unique_ptr<CalcNode> tree(createTree(argv[1]));
 
     InitializeNativeTarget();
     LLVMContext Context;
@@ -75,7 +129,7 @@ int main(int argc, char **argv) {
     OwningPtr<Module> M(new Module("test", Context));
 
     Type* ty=Type::getInt32Ty(Context);
-    Function* f = CreateCalcFunction(M.get(), Context, ty, mul);
+    Function* f = CreateCalcFunction(M.get(), Context, ty, *tree);
 
     auto engine=EngineKind::JIT;
     std::string errStr;
@@ -101,7 +155,7 @@ int main(int argc, char **argv) {
     errs() << "We just constructed this LLVM module:\n\n---------\n" << *M;
 
     std::vector<uint32_t> argList;
-    for (int i=1; i<argc; i++) {
+    for (int i=2; i<argc; i++) {
         argList.push_back(atoi(argv[i]));
     }
 

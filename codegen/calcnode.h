@@ -2,6 +2,7 @@
 #define CALCNODE_H
 
 #include <cstdint>
+#include <memory>
 
 class CalcNode {
     public:
@@ -29,8 +30,8 @@ class CalcNode {
 
         bool leaf;
 
-        const CalcNode* leftChild;
-        const CalcNode* rightChild;
+        std::unique_ptr<const CalcNode> leftChild;
+        std::unique_ptr<const CalcNode> rightChild;
 };
 
 #endif // CALCNODE_H

@@ -4,7 +4,7 @@ CXXFLAGS=-std=c++11 `llvm-config --cxxflags`
 LINK.o=$(LINK.cc)
 LDFLAGS=`llvm-config --ldflags --libs jit interpreter nativecodegen`
 
-ALL: calc
+ALL: calctree
 
 calctree: calctree.o calcnode.o
 
