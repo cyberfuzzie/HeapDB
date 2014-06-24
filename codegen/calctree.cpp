@@ -143,7 +143,7 @@ int main(int argc, char **argv) {
     // Create some module to put our function into it.
     OwningPtr<Module> M(new Module("test", Context));
 
-    Type* ty=Type::getInt32Ty(Context);
+    IntegerType* ty=Type::getInt32Ty(Context);
     Function* f = CreateCalcFunction(M.get(), Context, ty, *tree);
 
     auto engine=EngineKind::JIT;
@@ -172,7 +172,7 @@ int main(int argc, char **argv) {
     uint32_t argCount = tree->getHighestVar()+1;
     std::vector<GenericValue> Args(argCount);
     for (uint32_t i=0; i<argCount; i++) {
-        Args[i].IntVal = APInt(32, atoi(argv[i+2]));
+        Args[i].IntVal = APInt(ty->getBitWidth(), atoi(argv[i+2]));
     }
 
     errs() << "\nCalling calc with arguments ";
