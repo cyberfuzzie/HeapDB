@@ -1,4 +1,5 @@
 #include <cstring>
+#include <iostream>
 #include <memory>
 #include <stack>
 
@@ -110,7 +111,16 @@ CalcNode* createTree(char* input) {
 }
 
 void printHelp() {
-
+    cout << "Too few arguments" << endl << endl;
+    cout << "Usage: calctree <tree string> <variable values...>" << endl << endl;
+    cout << "\t<tree string>: the tree in reverse polish notation" << endl;
+    cout << "\t               e.g. \"0 1 + 2 3 - *\" gives the following tree:" << endl;
+    cout << "\t                  *" << endl;
+    cout << "\t                 / \\" << endl;
+    cout << "\t                +   -" << endl;
+    cout << "\t               / \\ / \\" << endl;
+    cout << "\t               0 1 2 3" << endl << endl;
+    cout << "\t<variable values...>: values for the variables used in the tree" << endl;
 }
 
 int main(int argc, char **argv) {
