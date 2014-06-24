@@ -33,3 +33,13 @@ const CalcNode &CalcNode::getLeftChild() const {
 const CalcNode &CalcNode::getRightChild() const {
     return *rightChild;
 }
+
+uint32_t CalcNode::getHighestVar() const {
+    if (leaf) {
+        return varNumber;
+    } else {
+        uint32_t leftMax = leftChild->getHighestVar();
+        uint32_t rightMax = rightChild->getHighestVar();
+        return leftMax>rightMax?leftMax:rightMax;
+    }
+}

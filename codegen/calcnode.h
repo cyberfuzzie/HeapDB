@@ -22,6 +22,8 @@ class CalcNode {
         const CalcNode& getLeftChild() const;
         const CalcNode& getRightChild() const;
 
+        uint32_t getHighestVar() const;
+
     private:
         union {
             uint32_t varNumber;

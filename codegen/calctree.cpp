@@ -20,19 +20,18 @@
 using namespace llvm;
 using namespace std;
 
-Value* ProcessNode(LLVMContext& Context, Function* func, BasicBlock *block, Type* dataType, Type* argType, const CalcNode& node) {
+Value* ProcessNode(LLVMContext& Context, Function* func, BasicBlock *block, Type* dataType, const CalcNode& node) {
     Value* result;
 
     if (node.isLeaf()) {
-        Argument* arg = func->arg_begin();
-        Value* argOffset = ConstantInt::get(dataType, node.getVarNumber());
-        Value* argPos = GetElementPtrInst::Create(arg, argOffset, "argPos", block);
-        result = new LoadInst(argPos, "arg", block);
-        return result;
+        auto it = func->arg_begin();
+        for (uint32_t i=0; i<node.getVarNumber(); i++)
+            it++;
+        return it;
     }
 
-    Value* callLeft = ProcessNode(Context, func, block, dataType, argType, node.getLeftChild());
-    Value* callRight = ProcessNode(Context, func, block, dataType, argType, node.getRightChild());
+    Value* callLeft = ProcessNode(Context, func, block, dataType, node.getLeftChild());
+    Value* callRight = ProcessNode(Context, func, block, dataType, node.getRightChild());
 
     switch (node.getOperator()) {
         case CalcNode::CalcOperator::add:
@@ -53,12 +52,18 @@ Value* ProcessNode(LLVMContext& Context, Function* func, BasicBlock *block, Type
 }
 
 static Function *CreateCalcFunction(Module *M, LLVMContext &Context, Type* dataType, const CalcNode& root) {
-    Type* argType = PointerType::get(dataType, 0);
-    Function *CalcF = cast<Function>(M->getOrInsertFunction("calc", dataType, argType, nullptr));
+    uint32_t argCount = root.getHighestVar()+1;
+    Type** argTypes = new Type*[argCount];
+    for (uint32_t i=0; i<argCount; i++) {
+        argTypes[i] = dataType;
+    }
+    ArrayRef<Type*> argArray(argTypes, argCount);
+    FunctionType *ft = FunctionType::get(dataType, argArray, false);
+    Function *CalcF = cast<Function>(M->getOrInsertFunction("calc", ft));
 
     BasicBlock *block = BasicBlock::Create(Context, "Block", CalcF);
 
-    Value* result = ProcessNode(Context, CalcF, block, dataType, argType, root);
+    Value* result = ProcessNode(Context, CalcF, block, dataType, root);
 
     ReturnInst::Create(Context, result, block);
 
@@ -164,18 +169,17 @@ int main(int argc, char **argv) {
     errs() << "OK\n";
     errs() << "We just constructed this LLVM module:\n\n---------\n" << *M;
 
-    std::vector<uint32_t> argList;
-    for (int i=2; i<argc; i++) {
-        argList.push_back(atoi(argv[i]));
+    uint32_t argCount = tree->getHighestVar()+1;
+    std::vector<GenericValue> Args(argCount);
+    for (uint32_t i=0; i<argCount; i++) {
+        Args[i].IntVal = APInt(32, atoi(argv[i+2]));
     }
 
     errs() << "\nCalling calc with arguments ";
-    for (auto it = argList.begin(); it != argList.end(); it++) {
-        errs() << *it << " ";
+    for (auto it = Args.begin(); it != Args.end(); it++) {
+        errs() << (*it).IntVal << " ";
     }
 
-    std::vector<GenericValue> Args(1);
-    Args[0].PointerVal = argList.data();
     GenericValue GV = EE->runFunction(f, Args);
 
     // import result of execution
